@@ -98,7 +98,27 @@ def create_image_overlay(pw, ph, photo_bytes_list):
     packet.seek(0)
     return packet
 
-def fill_pdf_bytes(row, photo_bytes_list):
+# ── Frases pré-definidas ─────────────────────────────────────────────────────
+FRASES_OBSERVACOES = [
+    "— Sem observações —",
+    "Após desmontagens das peças sinistradas, constatou-se que existe mais danos além dos avaliados no relatório de Peritagem inicial. Reparador vai informar o colega Perito deste facto, e solicitar aditamento ao R.P. inicial.",
+    "Embora o veículo já tivesse sido entregue ao seu proprietário, o reparador mostrou-nos o material que foi substituído, onde ficamos convictos de que a reparação terá sido realizada de acordo com o R.P. que foi elaborado pelo colega Perito.",
+    "Embora o veículo não estivesse na oficina, o reparador já tinha as peças novas de (Origem) em Stock para poderem ser aplicadas no veículo. Perante este facto, ficamos convictos de que a reparação irá decorrer de acordo com o R.P. que foi elaborado pelo colega Perito.",
+]
+
+FRASES_PERITO = [
+    "— Sem avaliação —",
+    "Após análise feita ao Relatório de peritagem realizado pelo Sr. Perito, constatamos, que o mesmo está realizado de acordo com os danos que o veículo apresentava VISÍVEIS, e de valor ajustado.",
+    "Após análise feita ao Relatório de peritagem que foi realizado pelo colega Perito, constatamos, que o mesmo está realizado de acordo com os danos que o veículo apresenta, e de valor ajustado.",
+]
+
+FRASES_OFICINA = [
+    "— Sem avaliação —",
+    "Responsável da oficina foi prestável e atencioso! Analisamos os trabalhos que estão a ser realizados no veículo sinistrado, onde certificamos que a reparação está a ser realizada de acordo com o R.P. que foi elaborado pelo colega Perito.",
+]
+
+
+def fill_pdf_bytes(row, photo_bytes_list, texto_obs, texto_perito, texto_oficina):
     template_bytes = get_template_bytes()
     reader = PdfReader(io.BytesIO(template_bytes))
     writer = PdfWriter()
@@ -113,6 +133,14 @@ def fill_pdf_bytes(row, photo_bytes_list):
         if hasattr(val, "strftime"):
             val = val.strftime("%d/%m/%Y")
         values[field_id] = str(val).strip()
+
+    # Sobrepor com textos escolhidos na app (têm prioridade sobre o Excel)
+    FIELD_OBS    = "F[0].Page_1[0].TextField12[0]"
+    FIELD_PERITO = "F[0].Page_1[0].TextField12[1]"
+    FIELD_OFIC   = "F[0].Page_1[0].TextField12[2]"
+    if texto_obs:    values[FIELD_OBS]    = texto_obs
+    if texto_perito: values[FIELD_PERITO] = texto_perito
+    if texto_oficina: values[FIELD_OFIC]  = texto_oficina
 
     writer.update_page_form_field_values(writer.pages[0], values)
 
@@ -217,7 +245,34 @@ with col_right:
                 except:
                     pass
 
-    st.markdown('<p class="step-label" style="margin-top:24px">4 · Gerar PDF</p>', unsafe_allow_html=True)
+    # ── Frases pré-definidas ─────────────────────────────────────────────────
+    st.markdown('<p class="step-label" style="margin-top:24px">4 · Textos do relatório</p>', unsafe_allow_html=True)
+
+    # Observações
+    st.markdown("**Observações**")
+    sel_obs = st.selectbox("Selecionar frase", FRASES_OBSERVACOES,
+                           key="sel_obs", label_visibility="collapsed")
+    texto_obs = st.text_area("Editar observações", value="" if sel_obs.startswith("—") else sel_obs,
+                              key="txt_obs", height=90, label_visibility="collapsed",
+                              placeholder="Escreva aqui ou selecione uma frase acima…")
+
+    # Avalie o serviço do perito
+    st.markdown("**Avalie o serviço do perito**")
+    sel_perito = st.selectbox("Selecionar frase perito", FRASES_PERITO,
+                               key="sel_perito", label_visibility="collapsed")
+    texto_perito = st.text_area("Editar avaliação perito", value="" if sel_perito.startswith("—") else sel_perito,
+                                 key="txt_perito", height=80, label_visibility="collapsed",
+                                 placeholder="Escreva aqui ou selecione uma frase acima…")
+
+    # Avalie o serviço da oficina
+    st.markdown("**Avalie o serviço da oficina**")
+    sel_oficina = st.selectbox("Selecionar frase oficina", FRASES_OFICINA,
+                                key="sel_oficina", label_visibility="collapsed")
+    texto_oficina = st.text_area("Editar avaliação oficina", value="" if sel_oficina.startswith("—") else sel_oficina,
+                                  key="txt_oficina", height=80, label_visibility="collapsed",
+                                  placeholder="Escreva aqui ou selecione uma frase acima…")
+
+    st.markdown('<p class="step-label" style="margin-top:24px">5 · Gerar PDF</p>', unsafe_allow_html=True)
 
     can_generate = selected_row is not None
 
@@ -227,7 +282,8 @@ with col_right:
     if st.button("⬇ Gerar e Descarregar PDF", disabled=not can_generate):
         with st.spinner("A gerar PDF..."):
             try:
-                pdf_bytes = fill_pdf_bytes(selected_row, photo_bytes_list)
+                pdf_bytes = fill_pdf_bytes(selected_row, photo_bytes_list,
+                                           texto_obs, texto_perito, texto_oficina)
                 sinistro = str(selected_row.get("Nº sinistro","sinistro")).strip()
                 mat = str(selected_row.get("Matrícula","")).strip().replace("-","")
                 filename = f"supervisao_{sinistro}_{mat}.pdf"
