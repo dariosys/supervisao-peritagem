@@ -143,21 +143,19 @@ PREVIEW_FIELDS = [
 
 # ── Funções PDF ─────────────────────────────────────────────────────────────
 
-def create_image_overlay(pw, ph, photo_files):
+def create_image_overlay(pw, ph, photo_bytes_list):
     packet = io.BytesIO()
     c = rl_canvas.Canvas(packet, pagesize=(pw, ph))
-    for photo_file, rect in zip(photo_files, PHOTO_RECTS):
-        if photo_file is None:
+    for photo_bytes, rect in zip(photo_bytes_list, PHOTO_RECTS):
+        if photo_bytes is None:
             continue
         x0, y0, x1, y1 = rect
         w, h = x1 - x0, y1 - y0
         pad = 4
         try:
-            img = Image.open(photo_file)
+            img = Image.open(io.BytesIO(photo_bytes))
+            img = img.convert("RGB")
             img.thumbnail((int(w - pad*2), int(h - pad*2)), Image.LANCZOS)
-            buf = io.BytesIO()
-            img.save(buf, format="PNG")
-            buf.seek(0)
             iw, ih = img.size
             ix = x0 + pad + (w - pad*2 - iw) / 2
             iy = y0 + pad + (h - pad*2 - ih) / 2
@@ -169,7 +167,7 @@ def create_image_overlay(pw, ph, photo_files):
     return packet
 
 
-def fill_pdf_bytes(template_bytes, row, photo_files):
+def fill_pdf_bytes(template_bytes, row, photo_bytes_list):
     template_buf = io.BytesIO(template_bytes)
     reader = PdfReader(template_buf)
     writer = PdfWriter()
@@ -195,9 +193,9 @@ def fill_pdf_bytes(template_bytes, row, photo_files):
     pw = float(page.mediabox.width)
     ph = float(page.mediabox.height)
 
-    active = [p for p in photo_files if p is not None]
+    active = [p for p in photo_bytes_list if p is not None]
     if active:
-        overlay_buf = create_image_overlay(pw, ph, photo_files)
+        overlay_buf = create_image_overlay(pw, ph, photo_bytes_list)
         overlay_page = PdfReader(overlay_buf).pages[0]
         final_reader = PdfReader(intermediate)
         final_writer = PdfWriter()
@@ -316,7 +314,7 @@ with col_right:
     st.markdown('<p class="step-label" style="margin-top:24px">4 · Suporte fotográfico (até 3 fotos)</p>', unsafe_allow_html=True)
 
     photo_cols = st.columns(3)
-    photo_files = [None, None, None]
+    photo_bytes_list = [None, None, None]
 
     for i, pcol in enumerate(photo_cols):
         with pcol:
@@ -325,10 +323,10 @@ with col_right:
                 key=f"photo_{i}", label_visibility="visible"
             )
             if uploaded:
-                photo_files[i] = io.BytesIO(uploaded.read())
+                raw = uploaded.read()
+                photo_bytes_list[i] = raw
                 try:
-                    img = Image.open(photo_files[i])
-                    photo_files[i].seek(0)
+                    img = Image.open(io.BytesIO(raw))
                     st.image(img, use_container_width=True)
                 except:
                     pass
@@ -351,7 +349,7 @@ with col_right:
             try:
                 pdf_file.seek(0)
                 template_bytes = pdf_file.read()
-                pdf_bytes = fill_pdf_bytes(template_bytes, selected_row, photo_files)
+                pdf_bytes = fill_pdf_bytes(template_bytes, selected_row, photo_bytes_list)
 
                 sinistro = str(selected_row.get("Nº sinistro", "sinistro")).strip()
                 mat      = str(selected_row.get("Matrícula", "")).strip().replace("-", "")
