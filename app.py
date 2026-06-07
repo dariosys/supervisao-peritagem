@@ -1,103 +1,181 @@
-#!/usr/bin/env python3
 """
-App de Preenchimento - Ficha de Supervisão de Peritagem
-Empresa: Tranquilidade / Açoreana / Logo
+Ficha de Supervisão de Peritagem — App Web
+Tranquilidade · Açoreana · Logo
 
-Uso: python supervisao_app.py
-Requisitos: pip install pypdf pandas openpyxl pillow reportlab
+Deploy gratuito em: https://streamlit.io/cloud
 """
 
-import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+import streamlit as st
 import pandas as pd
 from pypdf import PdfReader, PdfWriter
-from pypdf.generic import NameObject, create_string_object
 from reportlab.pdfgen import canvas as rl_canvas
-from reportlab.lib.pagesizes import A4
-from PIL import Image, ImageTk
+from PIL import Image
 import io
-import os
-import sys
-import copy
 
-# ── Paleta de cores ────────────────────────────────────────────────────────
-BG         = "#F5F6FA"
-CARD_BG    = "#FFFFFF"
-ACCENT     = "#C8102E"        # vermelho Generali
-ACCENT2    = "#1A1A2E"        # azul escuro
-TEXT       = "#1A1A2E"
-TEXT_LIGHT = "#6B7280"
-BORDER     = "#E5E7EB"
-SUCCESS    = "#059669"
-HOVER      = "#F3F4F6"
+# ── Config da página ────────────────────────────────────────────────────────
+st.set_page_config(
+    page_title="Ficha de Supervisão de Peritagem",
+    page_icon="📋",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
 
-FONT_TITLE  = ("Georgia", 18, "bold")
-FONT_LABEL  = ("Helvetica", 10)
-FONT_SMALL  = ("Helvetica", 9)
-FONT_BTN    = ("Helvetica", 10, "bold")
-FONT_HEADER = ("Helvetica", 11, "bold")
+# ── CSS personalizado ───────────────────────────────────────────────────────
+st.markdown("""
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap');
 
-# ── Mapeamento campos Excel → PDF ──────────────────────────────────────────
+  html, body, [class*="css"] { font-family: 'DM Sans', sans-serif; }
+
+  .header-bar {
+    background: #1A1A2E;
+    border-left: 6px solid #C8102E;
+    padding: 18px 28px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+  }
+  .header-bar h1 {
+    font-family: 'DM Serif Display', serif;
+    color: white;
+    font-size: 1.7rem;
+    margin: 0;
+    padding: 0;
+  }
+  .header-bar p {
+    color: #9CA3AF;
+    font-size: 0.82rem;
+    margin: 4px 0 0 0;
+  }
+
+  .step-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: #C8102E;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .info-card {
+    background: #F9FAFB;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    padding: 14px 18px;
+  }
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid #F3F4F6;
+    font-size: 0.88rem;
+  }
+  .info-row:last-child { border-bottom: none; }
+  .info-key { color: #6B7280; min-width: 110px; }
+  .info-val { color: #1A1A2E; font-weight: 500; text-align: right; }
+
+  .photo-placeholder {
+    border: 2px dashed #D1D5DB;
+    border-radius: 8px;
+    background: #F9FAFB;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 10px;
+    text-align: center;
+    color: #9CA3AF;
+    font-size: 0.82rem;
+    min-height: 120px;
+  }
+
+  div[data-testid="stButton"] > button {
+    background-color: #C8102E !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 6px !important;
+    font-weight: 600 !important;
+    padding: 0.5rem 2rem !important;
+    font-size: 1rem !important;
+    width: 100%;
+  }
+  div[data-testid="stButton"] > button:hover {
+    background-color: #A00D24 !important;
+  }
+
+  .stDataFrame { border: 1px solid #E5E7EB; border-radius: 8px; }
+
+  section[data-testid="stSidebar"] { display: none; }
+  #MainMenu { visibility: hidden; }
+  footer { visibility: hidden; }
+</style>
+""", unsafe_allow_html=True)
+
+# ── Mapeamento campos Excel → PDF ───────────────────────────────────────────
 FIELD_MAP = {
-    "F[0].Page_1[0].TextField9[1]" : "Nº sinistro",
-    "F[0].Page_1[0].TextField9[4]" : "Data/ Hora da Visita",
-    "F[0].Page_1[0].TextField9[2]" : "Matrícula",
-    "F[0].Page_1[0].TextField9[0]" : "Perito: Nome /Código",
-    "F[0].Page_1[0].TextField9[6]" : "Nome da oficina",
-    "F[0].Page_1[0].TextField9[7]" : "Nº prest ofic",
-    "F[0].Page_1[0].TextField12[0]": "Observações",
-    "F[0].Page_1[0].TextField12[1]": "Avalie o serviço do perito",
-    "F[0].Page_1[0].TextField12[2]": "Avalie o serviço da oficina",
-    "F[0].Page_1[0].TextField9[3]" : "supervisor",
+    "F[0].Page_1[0].TextField9[1]"    : "Nº sinistro",
+    "F[0].Page_1[0].TextField9[4]"    : "Data/ Hora da Visita",
+    "F[0].Page_1[0].TextField9[2]"    : "Matrícula",
+    "F[0].Page_1[0].TextField9[0]"    : "Perito: Nome /Código",
+    "F[0].Page_1[0].TextField9[6]"    : "Nome da oficina",
+    "F[0].Page_1[0].TextField9[7]"    : "Nº prest ofic",
+    "F[0].Page_1[0].TextField12[0]"   : "Observações",
+    "F[0].Page_1[0].TextField12[1]"   : "Avalie o serviço do perito",
+    "F[0].Page_1[0].TextField12[2]"   : "Avalie o serviço da oficina",
+    "F[0].Page_1[0].TextField9[3]"    : "supervisor",
     "F[0].Page_1[0].DateTimeField1[0]": "Data",
 }
 
-# Coordenadas PDF das 3 células de suporte fotográfico (x0, y0_bottom, x1, y1_top)
 PHOTO_RECTS = [
     (29.602,  129.542, 206.331, 259.189),
     (209.165, 129.542, 385.894, 259.189),
     (388.728, 129.542, 565.457, 259.189),
 ]
 
+PREVIEW_FIELDS = [
+    ("Nº Sinistro",  "Nº sinistro"),
+    ("Data Visita",  "Data/ Hora da Visita"),
+    ("Matrícula",    "Matrícula"),
+    ("Perito",       "Perito: Nome /Código"),
+    ("Oficina",      "Nome da oficina"),
+    ("Cód. Oficina", "Nº prest ofic"),
+    ("Supervisor",   "supervisor"),
+]
 
-# ── Utilitários PDF ────────────────────────────────────────────────────────
+# ── Funções PDF ─────────────────────────────────────────────────────────────
 
-def create_image_overlay(page_width, page_height, photos):
-    """Cria uma página PDF transparente com as fotos nas células corretas."""
+def create_image_overlay(pw, ph, photo_files):
     packet = io.BytesIO()
-    c = rl_canvas.Canvas(packet, pagesize=(page_width, page_height))
-    for i, (img_path, rect) in enumerate(zip(photos, PHOTO_RECTS)):
-        if not img_path:
+    c = rl_canvas.Canvas(packet, pagesize=(pw, ph))
+    for photo_file, rect in zip(photo_files, PHOTO_RECTS):
+        if photo_file is None:
             continue
         x0, y0, x1, y1 = rect
-        w = x1 - x0
-        h = y1 - y0
-        padding = 4
+        w, h = x1 - x0, y1 - y0
+        pad = 4
         try:
-            img = Image.open(img_path)
-            img.thumbnail((int(w - padding*2), int(h - padding*2)), Image.LANCZOS)
+            img = Image.open(photo_file)
+            img.thumbnail((int(w - pad*2), int(h - pad*2)), Image.LANCZOS)
             buf = io.BytesIO()
             img.save(buf, format="PNG")
             buf.seek(0)
-            # centre the image in the cell
             iw, ih = img.size
-            ix = x0 + padding + (w - padding*2 - iw) / 2
-            iy = y0 + padding + (h - padding*2 - ih) / 2
+            ix = x0 + pad + (w - pad*2 - iw) / 2
+            iy = y0 + pad + (h - pad*2 - ih) / 2
             c.drawInlineImage(img, ix, iy, iw, ih)
         except Exception as e:
-            print(f"Erro ao carregar foto {i+1}: {e}")
+            st.warning(f"Erro ao processar foto: {e}")
     c.save()
     packet.seek(0)
     return packet
 
 
-def fill_pdf(template_path, row, photos, output_path):
-    reader = PdfReader(template_path)
+def fill_pdf_bytes(template_bytes, row, photo_files):
+    template_buf = io.BytesIO(template_bytes)
+    reader = PdfReader(template_buf)
     writer = PdfWriter()
     writer.append(reader)
     writer.set_need_appearances_writer(True)
 
-    # Preencher campos de texto
     values = {}
     for field_id, col in FIELD_MAP.items():
         val = row.get(col, "")
@@ -109,366 +187,183 @@ def fill_pdf(template_path, row, photos, output_path):
 
     writer.update_page_form_field_values(writer.pages[0], values)
 
-    # Guardar PDF intermédio (necessário para merge das fotos)
     intermediate = io.BytesIO()
     writer.write(intermediate)
     intermediate.seek(0)
 
-    # Criar overlay com as fotos
     page = reader.pages[0]
     pw = float(page.mediabox.width)
     ph = float(page.mediabox.height)
 
-    active_photos = [p for p in photos if p]
-    if active_photos:
-        overlay_buf = create_image_overlay(pw, ph, photos)
-        overlay_reader = PdfReader(overlay_buf)
-        overlay_page = overlay_reader.pages[0]
-
-        # Merge overlay → página preenchida
+    active = [p for p in photo_files if p is not None]
+    if active:
+        overlay_buf = create_image_overlay(pw, ph, photo_files)
+        overlay_page = PdfReader(overlay_buf).pages[0]
         final_reader = PdfReader(intermediate)
         final_writer = PdfWriter()
         base_page = final_reader.pages[0]
         base_page.merge_page(overlay_page)
         final_writer.add_page(base_page)
-        with open(output_path, "wb") as f:
-            final_writer.write(f)
+        output = io.BytesIO()
+        final_writer.write(output)
+        return output.getvalue()
     else:
-        with open(output_path, "wb") as f:
-            f.write(intermediate.getvalue())
+        return intermediate.getvalue()
 
 
-# ── Interface gráfica ──────────────────────────────────────────────────────
+# ── Header ──────────────────────────────────────────────────────────────────
+st.markdown("""
+<div class="header-bar">
+  <h1>📋 Ficha de Supervisão de Peritagem</h1>
+  <p>Tranquilidade · Açoreana · Logo &nbsp;·&nbsp; Preencha e descarregue o PDF automaticamente</p>
+</div>
+""", unsafe_allow_html=True)
 
-class SupervisaoApp(tk.Tk):
-    def __init__(self):
-        super().__init__()
-        self.title("Ficha de Supervisão de Peritagem")
-        self.geometry("860x700")
-        self.minsize(800, 640)
-        self.configure(bg=BG)
-        self.resizable(True, True)
+# ── Layout principal ────────────────────────────────────────────────────────
+col_left, col_right = st.columns([1.1, 1], gap="large")
 
-        self.excel_path   = tk.StringVar()
-        self.pdf_path     = tk.StringVar()
-        self.output_dir   = tk.StringVar()
-        self.df           = None
-        self.selected_row = None
-        self.photos       = [None, None, None]
-        self.photo_labels = []
+with col_left:
+    # ── PASSO 1: Excel ──────────────────────────────────────────────────────
+    st.markdown('<p class="step-label">1 · Carregar Excel (mapa do dia)</p>', unsafe_allow_html=True)
+    excel_file = st.file_uploader(
+        "Ficheiro Excel", type=["xlsx", "xls"],
+        label_visibility="collapsed", key="excel"
+    )
 
-        self._build_ui()
+    df = None
+    selected_row = None
 
-    # ── Layout principal ───────────────────────────────────────────────────
-
-    def _build_ui(self):
-        # Header
-        hdr = tk.Frame(self, bg=ACCENT2, pady=14)
-        hdr.pack(fill="x")
-        tk.Label(hdr, text="Ficha de Supervisão de Peritagem",
-                 font=FONT_TITLE, bg=ACCENT2, fg="white").pack(side="left", padx=24)
-        tk.Label(hdr, text="Tranquilidade · Açoreana · Logo",
-                 font=FONT_SMALL, bg=ACCENT2, fg="#9CA3AF").pack(side="right", padx=24)
-
-        body = tk.Frame(self, bg=BG)
-        body.pack(fill="both", expand=True, padx=20, pady=16)
-        body.columnconfigure(0, weight=1)
-        body.columnconfigure(1, weight=1)
-
-        # Coluna esquerda — ficheiros + sinistros
-        left = tk.Frame(body, bg=BG)
-        left.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
-
-        self._section(left, "1 · Ficheiros").pack(fill="x", pady=(0, 12))
-        self._file_row(left, "Excel (mapa):",   self.excel_path, self._load_excel, "xlsx").pack(fill="x", pady=3)
-        self._file_row(left, "PDF (template):", self.pdf_path,   self._pick_pdf,   "pdf" ).pack(fill="x", pady=3)
-        self._file_row(left, "Pasta de saída:", self.output_dir, self._pick_outdir, "dir").pack(fill="x", pady=3)
-
-        self._section(left, "2 · Selecionar sinistro").pack(fill="x", pady=(12, 6))
-
-        # search box
-        sf = tk.Frame(left, bg=BG)
-        sf.pack(fill="x", pady=(0, 4))
-        tk.Label(sf, text="Pesquisar:", font=FONT_SMALL, bg=BG, fg=TEXT_LIGHT).pack(side="left")
-        self.search_var = tk.StringVar()
-        self.search_var.trace("w", lambda *_: self._filter_list())
-        tk.Entry(sf, textvariable=self.search_var, font=FONT_LABEL,
-                 relief="flat", bd=1, highlightthickness=1,
-                 highlightbackground=BORDER, highlightcolor=ACCENT).pack(side="left", fill="x", expand=True, padx=(6, 0))
-
-        # listbox
-        lf = tk.Frame(left, bg=BORDER, bd=1)
-        lf.pack(fill="both", expand=True)
-        self.listbox = tk.Listbox(lf, font=FONT_LABEL, bg=CARD_BG, fg=TEXT,
-                                  selectbackground=ACCENT, selectforeground="white",
-                                  relief="flat", activestyle="none",
-                                  highlightthickness=0, borderwidth=0)
-        sb = ttk.Scrollbar(lf, orient="vertical", command=self.listbox.yview)
-        self.listbox.configure(yscrollcommand=sb.set)
-        sb.pack(side="right", fill="y")
-        self.listbox.pack(side="left", fill="both", expand=True)
-        self.listbox.bind("<<ListboxSelect>>", self._on_select)
-
-        self.info_label = tk.Label(left, text="Carregue um Excel para ver os sinistros.",
-                                   font=FONT_SMALL, bg=BG, fg=TEXT_LIGHT, anchor="w")
-        self.info_label.pack(fill="x", pady=(4, 0))
-
-        # Coluna direita — pré-visualização + fotos
-        right = tk.Frame(body, bg=BG)
-        right.grid(row=0, column=1, sticky="nsew")
-
-        self._section(right, "3 · Dados do sinistro").pack(fill="x", pady=(0, 8))
-        self.preview_frame = tk.Frame(right, bg=CARD_BG, relief="flat",
-                                      highlightthickness=1, highlightbackground=BORDER)
-        self.preview_frame.pack(fill="x")
-        self.preview_labels = {}
-        preview_fields = [
-            ("Nº Sinistro",   "Nº sinistro"),
-            ("Data",          "Data/ Hora da Visita"),
-            ("Matrícula",     "Matrícula"),
-            ("Perito",        "Perito: Nome /Código"),
-            ("Oficina",       "Nome da oficina"),
-            ("Supervisor",    "supervisor"),
-        ]
-        for i, (lbl, col) in enumerate(preview_fields):
-            row_f = tk.Frame(self.preview_frame, bg=CARD_BG if i % 2 == 0 else HOVER)
-            row_f.pack(fill="x")
-            tk.Label(row_f, text=lbl, font=FONT_SMALL, bg=row_f["bg"],
-                     fg=TEXT_LIGHT, width=14, anchor="w").pack(side="left", padx=8, pady=4)
-            var = tk.StringVar(value="—")
-            self.preview_labels[col] = var
-            tk.Label(row_f, textvariable=var, font=FONT_LABEL, bg=row_f["bg"],
-                     fg=TEXT, anchor="w").pack(side="left", fill="x", expand=True, padx=4)
-
-        self._section(right, "4 · Suporte fotográfico (máx. 3 fotos)").pack(fill="x", pady=(14, 6))
-        photos_frame = tk.Frame(right, bg=BG)
-        photos_frame.pack(fill="x")
-        self.photo_labels = []
-        for i in range(3):
-            pf = tk.Frame(photos_frame, bg=CARD_BG, width=175, height=110,
-                          relief="flat", highlightthickness=1, highlightbackground=BORDER,
-                          cursor="hand2")
-            pf.pack(side="left", padx=(0 if i == 0 else 8, 0))
-            pf.pack_propagate(False)
-
-            inner = tk.Frame(pf, bg=CARD_BG)
-            inner.place(relx=0.5, rely=0.5, anchor="center")
-
-            icon = tk.Label(inner, text="📷", font=("Helvetica", 22), bg=CARD_BG, fg=TEXT_LIGHT)
-            icon.pack()
-            lbl_txt = tk.Label(inner, text=f"Foto {i+1}", font=FONT_SMALL, bg=CARD_BG, fg=TEXT_LIGHT)
-            lbl_txt.pack()
-
-            self.photo_labels.append({"frame": pf, "icon": icon, "label": lbl_txt, "img_ref": None})
-
-            idx = i
-            pf.bind("<Button-1>", lambda e, n=idx: self._pick_photo(n))
-            icon.bind("<Button-1>", lambda e, n=idx: self._pick_photo(n))
-            lbl_txt.bind("<Button-1>", lambda e, n=idx: self._pick_photo(n))
-
-            # botão remover
-            rm = tk.Label(pf, text="✕", font=FONT_SMALL, bg=CARD_BG, fg=TEXT_LIGHT, cursor="hand2")
-            rm.place(relx=1.0, rely=0.0, anchor="ne", x=-4, y=4)
-            rm.bind("<Button-1>", lambda e, n=idx: self._remove_photo(n))
-
-        # Botão gerar
-        btn_frame = tk.Frame(self, bg=BG)
-        btn_frame.pack(fill="x", padx=20, pady=(4, 16))
-
-        self.generate_btn = tk.Button(
-            btn_frame, text="⬇  Gerar PDF Preenchido",
-            font=FONT_BTN, bg=ACCENT, fg="white", activebackground="#A00D24",
-            activeforeground="white", relief="flat", padx=24, pady=10,
-            cursor="hand2", command=self._generate
-        )
-        self.generate_btn.pack(side="right")
-
-        self.status_label = tk.Label(btn_frame, text="", font=FONT_SMALL,
-                                     bg=BG, fg=TEXT_LIGHT, anchor="w")
-        self.status_label.pack(side="left", fill="x", expand=True)
-
-    # ── Helpers UI ─────────────────────────────────────────────────────────
-
-    def _section(self, parent, title):
-        f = tk.Frame(parent, bg=BG)
-        tk.Label(f, text=title.upper(), font=("Helvetica", 9, "bold"),
-                 bg=BG, fg=ACCENT).pack(side="left")
-        tk.Frame(f, bg=BORDER, height=1).pack(side="left", fill="x", expand=True, padx=(8, 0), pady=6)
-        return f
-
-    def _file_row(self, parent, label, var, cmd, kind):
-        f = tk.Frame(parent, bg=BG)
-        tk.Label(f, text=label, font=FONT_SMALL, bg=BG, fg=TEXT, width=14, anchor="w").pack(side="left")
-        e = tk.Entry(f, textvariable=var, font=FONT_SMALL, state="readonly",
-                     relief="flat", bd=0, readonlybackground=CARD_BG,
-                     fg=TEXT, highlightthickness=1,
-                     highlightbackground=BORDER, highlightcolor=ACCENT)
-        e.pack(side="left", fill="x", expand=True, ipady=4, padx=(0, 6))
-        btn = tk.Button(f, text="...", font=FONT_SMALL, command=cmd,
-                        bg=ACCENT2, fg="white", activebackground=ACCENT,
-                        activeforeground="white", relief="flat", padx=8, pady=2, cursor="hand2")
-        btn.pack(side="left")
-        return f
-
-    # ── Ações de ficheiros ─────────────────────────────────────────────────
-
-    def _load_excel(self):
-        path = filedialog.askopenfilename(
-            title="Escolha o ficheiro Excel",
-            filetypes=[("Excel", "*.xlsx *.xls"), ("Todos", "*.*")]
-        )
-        if not path:
-            return
+    if excel_file:
         try:
-            self.df = pd.read_excel(path)
-            self.excel_path.set(path)
-            self._populate_list()
-            self._set_status(f"Excel carregado: {len(self.df)} sinistro(s)", SUCCESS)
+            df = pd.read_excel(excel_file)
+            st.success(f"✓ {len(df)} sinistro(s) carregado(s)")
         except Exception as e:
-            messagebox.showerror("Erro", f"Não foi possível abrir o Excel:\n{e}")
+            st.error(f"Erro ao ler Excel: {e}")
 
-    def _pick_pdf(self):
-        path = filedialog.askopenfilename(
-            title="Escolha o PDF template",
-            filetypes=[("PDF", "*.pdf"), ("Todos", "*.*")]
-        )
-        if path:
-            self.pdf_path.set(path)
+    # ── PASSO 2: Template PDF ───────────────────────────────────────────────
+    st.markdown('<p class="step-label" style="margin-top:20px">2 · Template PDF</p>', unsafe_allow_html=True)
+    pdf_file = st.file_uploader(
+        "PDF template", type=["pdf"],
+        label_visibility="collapsed", key="pdf"
+    )
+    if pdf_file:
+        st.success("✓ Template PDF carregado")
 
-    def _pick_outdir(self):
-        path = filedialog.askdirectory(title="Escolha a pasta de destino")
-        if path:
-            self.output_dir.set(path)
+    # ── PASSO 3: Selecionar sinistro ────────────────────────────────────────
+    if df is not None:
+        st.markdown('<p class="step-label" style="margin-top:20px">3 · Selecionar sinistro</p>', unsafe_allow_html=True)
 
-    # ── Lista de sinistros ─────────────────────────────────────────────────
+        search = st.text_input("🔍 Pesquisar por nº sinistro, matrícula ou oficina",
+                               placeholder="ex: 28765768 ou AH-79-JN",
+                               label_visibility="collapsed")
 
-    def _populate_list(self):
-        self.all_items = []
-        for i, row in self.df.iterrows():
-            sinistro = str(row.get("Nº sinistro", "")).strip()
-            oficina  = str(row.get("Nome da oficina", "")).strip()
-            mat      = str(row.get("Matrícula", "")).strip()
-            label    = f"{sinistro}  ·  {mat}  ·  {oficina[:30]}"
-            self.all_items.append((label, i))
-        self._filter_list()
+        # Filtrar
+        mask = pd.Series([True] * len(df))
+        if search.strip():
+            q = search.strip().lower()
+            mask = df.apply(
+                lambda r: any(q in str(r.get(c, "")).lower()
+                              for c in ["Nº sinistro", "Matrícula", "Nome da oficina"]),
+                axis=1
+            )
 
-    def _filter_list(self):
-        if self.df is None:
-            return
-        q = self.search_var.get().lower()
-        self.listbox.delete(0, "end")
-        self.filtered_indices = []
-        for label, idx in self.all_items:
-            if q in label.lower():
-                self.listbox.insert("end", "  " + label)
-                self.filtered_indices.append(idx)
-        self.info_label.config(text=f"{self.listbox.size()} sinistro(s) encontrado(s).")
+        filtered_df = df[mask].reset_index(drop=False)
 
-    def _on_select(self, event):
-        sel = self.listbox.curselection()
-        if not sel:
-            return
-        row_idx = self.filtered_indices[sel[0]]
-        self.selected_row = self.df.iloc[row_idx]
-        # Actualizar pré-visualização
-        for col, var in self.preview_labels.items():
-            val = self.selected_row.get(col, "")
+        if len(filtered_df) == 0:
+            st.info("Nenhum sinistro encontrado.")
+        else:
+            # Criar opções para o selectbox
+            options = []
+            for _, r in filtered_df.iterrows():
+                sin = str(r.get("Nº sinistro", "")).strip()
+                mat = str(r.get("Matrícula", "")).strip()
+                ofi = str(r.get("Nome da oficina", "")).strip()[:35]
+                options.append(f"{sin}  ·  {mat}  ·  {ofi}")
+
+            choice = st.selectbox(
+                "Sinistro", options,
+                label_visibility="collapsed"
+            )
+
+            chosen_idx = options.index(choice)
+            orig_idx = filtered_df.iloc[chosen_idx]["index"]
+            selected_row = df.iloc[orig_idx]
+
+with col_right:
+    # ── Pré-visualização dos dados ──────────────────────────────────────────
+    st.markdown('<p class="step-label">Dados do sinistro selecionado</p>', unsafe_allow_html=True)
+
+    if selected_row is not None:
+        rows_html = ""
+        for label, col in PREVIEW_FIELDS:
+            val = selected_row.get(col, "")
             if pd.isna(val):
                 val = "—"
             elif hasattr(val, "strftime"):
                 val = val.strftime("%d/%m/%Y")
-            var.set(str(val).strip() or "—")
+            else:
+                val = str(val).strip() or "—"
+            rows_html += f"""
+            <div class="info-row">
+              <span class="info-key">{label}</span>
+              <span class="info-val">{val}</span>
+            </div>"""
+        st.markdown(f'<div class="info-card">{rows_html}</div>', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="info-card" style="color:#9CA3AF;font-size:0.9rem;text-align:center;padding:32px">Selecione um sinistro à esquerda</div>', unsafe_allow_html=True)
 
-    # ── Fotos ──────────────────────────────────────────────────────────────
+    # ── PASSO 4: Fotografias ────────────────────────────────────────────────
+    st.markdown('<p class="step-label" style="margin-top:24px">4 · Suporte fotográfico (até 3 fotos)</p>', unsafe_allow_html=True)
 
-    def _pick_photo(self, idx):
-        path = filedialog.askopenfilename(
-            title=f"Escolha a Foto {idx+1}",
-            filetypes=[("Imagens", "*.jpg *.jpeg *.png *.bmp *.tiff *.webp"), ("Todos", "*.*")]
-        )
-        if not path:
-            return
-        self.photos[idx] = path
-        self._refresh_photo(idx)
+    photo_cols = st.columns(3)
+    photo_files = [None, None, None]
 
-    def _remove_photo(self, idx):
-        self.photos[idx] = None
-        self._refresh_photo(idx)
+    for i, pcol in enumerate(photo_cols):
+        with pcol:
+            uploaded = st.file_uploader(
+                f"Foto {i+1}", type=["jpg", "jpeg", "png", "bmp", "webp"],
+                key=f"photo_{i}", label_visibility="visible"
+            )
+            if uploaded:
+                photo_files[i] = io.BytesIO(uploaded.read())
+                try:
+                    img = Image.open(photo_files[i])
+                    photo_files[i].seek(0)
+                    st.image(img, use_container_width=True)
+                except:
+                    pass
 
-    def _refresh_photo(self, idx):
-        info = self.photo_labels[idx]
-        if self.photos[idx]:
+    # ── PASSO 5: Gerar PDF ──────────────────────────────────────────────────
+    st.markdown('<p class="step-label" style="margin-top:24px">5 · Gerar PDF</p>', unsafe_allow_html=True)
+
+    can_generate = (selected_row is not None) and (pdf_file is not None)
+
+    if not can_generate:
+        missing = []
+        if pdf_file is None:
+            missing.append("template PDF")
+        if selected_row is None:
+            missing.append("sinistro selecionado")
+        st.info(f"Falta: {' e '.join(missing)}")
+
+    if st.button("⬇ Gerar e Descarregar PDF", disabled=not can_generate):
+        with st.spinner("A gerar PDF..."):
             try:
-                img = Image.open(self.photos[idx])
-                img.thumbnail((160, 95), Image.LANCZOS)
-                tk_img = ImageTk.PhotoImage(img)
-                info["icon"].configure(image=tk_img, text="")
-                info["icon"].image = tk_img
-                fname = os.path.basename(self.photos[idx])
-                info["label"].configure(text=fname[:22], fg=TEXT)
+                pdf_file.seek(0)
+                template_bytes = pdf_file.read()
+                pdf_bytes = fill_pdf_bytes(template_bytes, selected_row, photo_files)
+
+                sinistro = str(selected_row.get("Nº sinistro", "sinistro")).strip()
+                mat      = str(selected_row.get("Matrícula", "")).strip().replace("-", "")
+                filename = f"supervisao_{sinistro}_{mat}.pdf"
+
+                st.download_button(
+                    label="📥 Clique aqui para descarregar o PDF",
+                    data=pdf_bytes,
+                    file_name=filename,
+                    mime="application/pdf",
+                    use_container_width=True,
+                )
+                st.success(f"✓ PDF gerado: {filename}")
             except Exception as e:
-                info["icon"].configure(image="", text="⚠", fg=ACCENT)
-                info["label"].configure(text="Erro na imagem", fg=ACCENT)
-        else:
-            info["icon"].configure(image="", text="📷", fg=TEXT_LIGHT)
-            info["label"].configure(text=f"Foto {idx+1}", fg=TEXT_LIGHT)
-
-    # ── Gerar PDF ──────────────────────────────────────────────────────────
-
-    def _generate(self):
-        if self.selected_row is None:
-            messagebox.showwarning("Atenção", "Selecione um sinistro primeiro.")
-            return
-        if not self.pdf_path.get():
-            messagebox.showwarning("Atenção", "Escolha o ficheiro PDF template.")
-            return
-        if not self.output_dir.get():
-            messagebox.showwarning("Atenção", "Escolha a pasta de destino.")
-            return
-
-        sinistro = str(self.selected_row.get("Nº sinistro", "sinistro")).strip()
-        mat      = str(self.selected_row.get("Matrícula", "")).strip().replace("-", "")
-        out_name = f"supervisao_{sinistro}_{mat}.pdf"
-        out_path = os.path.join(self.output_dir.get(), out_name)
-
-        self._set_status("A gerar PDF...", TEXT_LIGHT)
-        self.update_idletasks()
-
-        try:
-            fill_pdf(self.pdf_path.get(), self.selected_row, self.photos, out_path)
-            self._set_status(f"✓ PDF gerado: {out_name}", SUCCESS)
-            if messagebox.askyesno("Sucesso", f"PDF gerado com sucesso!\n\n{out_path}\n\nAbrir a pasta?"):
-                self._open_folder(self.output_dir.get())
-        except Exception as e:
-            self._set_status(f"Erro: {e}", ACCENT)
-            messagebox.showerror("Erro", f"Não foi possível gerar o PDF:\n{e}")
-
-    def _set_status(self, msg, color=TEXT_LIGHT):
-        self.status_label.config(text=msg, fg=color)
-
-    def _open_folder(self, path):
-        import subprocess, platform
-        if platform.system() == "Windows":
-            os.startfile(path)
-        elif platform.system() == "Darwin":
-            subprocess.Popen(["open", path])
-        else:
-            subprocess.Popen(["xdg-open", path])
-
-
-# ── Estilo ttk ────────────────────────────────────────────────────────────
-
-def apply_style():
-    style = ttk.Style()
-    style.theme_use("clam")
-    style.configure("Vertical.TScrollbar",
-                    background=BG, troughcolor=BG, arrowcolor=TEXT_LIGHT,
-                    borderwidth=0, relief="flat")
-
-
-# ── Entrada ────────────────────────────────────────────────────────────────
-
-if __name__ == "__main__":
-    app = SupervisaoApp()
-    apply_style()
-    app.mainloop()
+                st.error(f"Erro ao gerar PDF: {e}")
