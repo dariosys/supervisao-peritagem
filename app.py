@@ -248,29 +248,42 @@ with col_right:
     # ── Frases pré-definidas ─────────────────────────────────────────────────
     st.markdown('<p class="step-label" style="margin-top:24px">4 · Textos do relatório</p>', unsafe_allow_html=True)
 
+    # Inicializar session_state para os três campos
+    for key, default in [("txt_obs",""), ("txt_perito",""), ("txt_oficina",""),
+                         ("prev_sel_obs",""), ("prev_sel_perito",""), ("prev_sel_oficina","")]:
+        if key not in st.session_state:
+            st.session_state[key] = default
+
+    def aplicar_frase(sel_key, txt_key, prev_key, frases):
+        sel = st.selectbox(
+            "frase", frases,
+            key=sel_key, label_visibility="collapsed"
+        )
+        # Só atualiza o texto quando a seleção muda (e não é a opção vazia)
+        if sel != st.session_state[prev_key]:
+            st.session_state[prev_key] = sel
+            st.session_state[txt_key] = "" if sel.startswith("—") else sel
+
     # Observações
     st.markdown("**Observações**")
-    sel_obs = st.selectbox("Selecionar frase", FRASES_OBSERVACOES,
-                           key="sel_obs", label_visibility="collapsed")
-    texto_obs = st.text_area("Editar observações", value="" if sel_obs.startswith("—") else sel_obs,
-                              key="txt_obs", height=90, label_visibility="collapsed",
-                              placeholder="Escreva aqui ou selecione uma frase acima…")
+    aplicar_frase("sel_obs", "txt_obs", "prev_sel_obs", FRASES_OBSERVACOES)
+    texto_obs = st.text_area("obs", key="txt_obs", height=90,
+                              label_visibility="collapsed",
+                              placeholder="Selecione uma frase acima ou escreva aqui…")
 
     # Avalie o serviço do perito
     st.markdown("**Avalie o serviço do perito**")
-    sel_perito = st.selectbox("Selecionar frase perito", FRASES_PERITO,
-                               key="sel_perito", label_visibility="collapsed")
-    texto_perito = st.text_area("Editar avaliação perito", value="" if sel_perito.startswith("—") else sel_perito,
-                                 key="txt_perito", height=80, label_visibility="collapsed",
-                                 placeholder="Escreva aqui ou selecione uma frase acima…")
+    aplicar_frase("sel_perito", "txt_perito", "prev_sel_perito", FRASES_PERITO)
+    texto_perito = st.text_area("perito", key="txt_perito", height=80,
+                                 label_visibility="collapsed",
+                                 placeholder="Selecione uma frase acima ou escreva aqui…")
 
     # Avalie o serviço da oficina
     st.markdown("**Avalie o serviço da oficina**")
-    sel_oficina = st.selectbox("Selecionar frase oficina", FRASES_OFICINA,
-                                key="sel_oficina", label_visibility="collapsed")
-    texto_oficina = st.text_area("Editar avaliação oficina", value="" if sel_oficina.startswith("—") else sel_oficina,
-                                  key="txt_oficina", height=80, label_visibility="collapsed",
-                                  placeholder="Escreva aqui ou selecione uma frase acima…")
+    aplicar_frase("sel_oficina", "txt_oficina", "prev_sel_oficina", FRASES_OFICINA)
+    texto_oficina = st.text_area("oficina", key="txt_oficina", height=80,
+                                  label_visibility="collapsed",
+                                  placeholder="Selecione uma frase acima ou escreva aqui…")
 
     st.markdown('<p class="step-label" style="margin-top:24px">5 · Gerar PDF</p>', unsafe_allow_html=True)
 
