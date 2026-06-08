@@ -378,9 +378,9 @@ with col_left:
                     cod_oficina = str(r.get("Nº prest ofic", "")).strip()
                     if cod_oficina == "nan": cod_oficina = ""
 
-                    # Convencionada — vem de Desc.Tipo Oficina
-                    convencionada = str(r.get("Desc.Tipo Oficina", "")).strip()
-                    if convencionada == "nan": convencionada = ""
+                    convencionada_raw = str(r.get("Desc.Tipo Oficina", "")).strip()
+                    if convencionada_raw == "nan": convencionada_raw = ""
+                    convencionada = "Sim" if "CONVENCIONADA" in convencionada_raw.upper() else "Não"
 
                     # Zona — Morada local prestação ou Localidade
                     zona = str(r.get("Morada local prestação", r.get("Localidade", ""))).strip()
@@ -397,27 +397,33 @@ with col_left:
                         "Convencionada": convencionada,
                         "NLO"          : "Não",
                         "Zona"         : zona,
+                        "Redução 25%"  : "Não",
                     })
 
                 df_export = pd.DataFrame(export_rows, columns=[
                     "Deslocação", "Mês", "Ocorrência", "Sinistro", "Entidade",
-                    "Cod. Oficina", "Motivo", "Convencionada", "NLO", "Zona"
+                    "Cod. Oficina", "Motivo", "Convencionada", "NLO", "Zona", "Redução 25%"
                 ])
 
                 buf = _io.BytesIO()
                 with pd.ExcelWriter(buf, engine="openpyxl") as writer:
                     df_export.to_excel(writer, index=False, sheet_name="Deslocações")
                     ws = writer.sheets["Deslocações"]
-                    col_widths = [13, 12, 12, 14, 16, 14, 12, 16, 6, 20]
+                    col_widths = [13, 12, 12, 14, 16, 14, 12, 14, 6, 20, 13]
                     for i, w in enumerate(col_widths, 1):
                         ws.column_dimensions[ws.cell(1, i).column_letter].width = w
-                    # Cabeçalho a negrito
-                    from openpyxl.styles import Font, PatternFill, Alignment
-                    for cell in ws[1]:
-                        cell.font = Font(bold=True)
-                        cell.fill = PatternFill("solid", fgColor="1A1A2E")
-                        cell.font = Font(bold=True, color="FFFFFF")
-                        cell.alignment = Alignment(horizontal="center")
+
+                    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+                    thin = Side(style="thin", color="000000")
+                    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+                    for row in ws.iter_rows(min_row=1, max_row=ws.max_row, max_col=ws.max_column):
+                        for cell in row:
+                            cell.alignment = Alignment(horizontal="center", vertical="center")
+                            cell.border = border
+                            if cell.row == 1:
+                                cell.font = Font(bold=True, color="FFFFFF")
+                                cell.fill = PatternFill("solid", fgColor="1A1A2E")
                 buf.seek(0)
                 return buf.getvalue()
 
