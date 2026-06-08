@@ -139,15 +139,33 @@ def create_image_overlay(pw, ph, photo_bytes_list):
         if photo_bytes is None:
             continue
         x0, y0, x1, y1 = rect
-        w, h = x1 - x0, y1 - y0
-        pad = 4
+        cell_w = x1 - x0
+        cell_h = y1 - y0
+        pad = 3
+        draw_w = cell_w - pad * 2
+        draw_h = cell_h - pad * 2
         try:
             img = Image.open(io.BytesIO(photo_bytes)).convert("RGB")
-            img.thumbnail((int(w - pad*2), int(h - pad*2)), Image.LANCZOS)
-            iw, ih = img.size
-            ix = x0 + pad + (w - pad*2 - iw) / 2
-            iy = y0 + pad + (h - pad*2 - ih) / 2
-            c.drawInlineImage(img, ix, iy, iw, ih)
+            orig_w, orig_h = img.size
+
+            # Calcular escala para preencher a célula mantendo proporção
+            scale = min(draw_w / orig_w, draw_h / orig_h)
+            final_w = orig_w * scale
+            final_h = orig_h * scale
+
+            # Centrar na célula
+            ix = x0 + pad + (draw_w - final_w) / 2
+            iy = y0 + pad + (draw_h - final_h) / 2
+
+            # Guardar em buffer PNG com máxima qualidade (sem reduzir pixels)
+            img_buf = io.BytesIO()
+            img.save(img_buf, format="PNG", optimize=False, compress_level=1)
+            img_buf.seek(0)
+
+            # Usar ImageReader para alta qualidade — preserva todos os pixels originais
+            from reportlab.lib.utils import ImageReader
+            c.drawImage(ImageReader(img_buf), ix, iy, width=final_w, height=final_h,
+                        preserveAspectRatio=True, anchor="c")
         except Exception as e:
             st.warning(f"Erro ao processar foto: {e}")
     c.save()
@@ -321,50 +339,85 @@ with col_left:
             # ── Exportar Excel ────────────────────────────────────────────────
             st.markdown("---")
 
+            MESES_PT = {
+                1:"Janeiro", 2:"Fevereiro", 3:"Março", 4:"Abril",
+                5:"Maio", 6:"Junho", 7:"Julho", 8:"Agosto",
+                9:"Setembro", 10:"Outubro", 11:"Novembro", 12:"Dezembro"
+            }
+
             def gerar_excel_export(meus_rows_df):
                 import io as _io
                 export_rows = []
                 for _, r in meus_rows_df.iterrows():
-                    # Deslocação = data do PDF (Dt efect in ou Data/ Hora da Visita)
+                    # Deslocação = data visita
                     data_val = r.get("Dt efect in", r.get("Data/ Hora da Visita", ""))
                     if hasattr(data_val, "strftime"):
-                        data_val = data_val.strftime("%d/%m/%Y")
-                    elif pd.isna(data_val):
-                        data_val = ""
+                        mes_num = data_val.month
+                        data_str = data_val.strftime("%d/%m/%Y")
+                    elif not pd.isna(data_val) and str(data_val).strip():
+                        try:
+                            dt = pd.to_datetime(data_val, dayfirst=True)
+                            mes_num = dt.month
+                            data_str = dt.strftime("%d/%m/%Y")
+                        except:
+                            mes_num = 0
+                            data_str = str(data_val).strip()
                     else:
-                        data_val = str(data_val).strip()
+                        mes_num = 0
+                        data_str = ""
 
+                    mes_str = MESES_PT.get(mes_num, "")
+
+                    # Sinistro
                     sinistro = str(r.get("Nº sinistro", "")).strip()
+
+                    # Entidade — 10 dígitos = Logo, 8 dígitos = Tranquilidade
+                    entidade = "Logo" if len(sinistro) == 10 else "Tranquilidade"
+
+                    # Cod. Oficina
                     cod_oficina = str(r.get("Nº prest ofic", "")).strip()
+                    if cod_oficina == "nan": cod_oficina = ""
+
+                    # Convencionada — vem de Desc.Tipo Oficina
+                    convencionada = str(r.get("Desc.Tipo Oficina", "")).strip()
+                    if convencionada == "nan": convencionada = ""
+
+                    # Zona — Morada local prestação ou Localidade
                     zona = str(r.get("Morada local prestação", r.get("Localidade", ""))).strip()
-                    if pd.isna(zona) or zona == "nan": zona = ""
+                    if zona == "nan": zona = ""
 
                     export_rows.append({
-                        "Deslocação"  : data_val,
-                        "Ocorrência"  : "",
-                        "Sinistro"    : sinistro,
-                        "Cod. Oficina": cod_oficina,
-                        "Motivo"      : "",
-                        "Convencionada": "",
-                        "NLO"         : "",
-                        "Zona"        : zona,
+                        "Deslocação"   : data_str,
+                        "Mês"          : mes_str,
+                        "Ocorrência"   : "",
+                        "Sinistro"     : sinistro,
+                        "Entidade"     : entidade,
+                        "Cod. Oficina" : cod_oficina,
+                        "Motivo"       : "",
+                        "Convencionada": convencionada,
+                        "NLO"          : "Não",
+                        "Zona"         : zona,
                     })
 
                 df_export = pd.DataFrame(export_rows, columns=[
-                    "Deslocação", "Ocorrência", "Sinistro",
+                    "Deslocação", "Mês", "Ocorrência", "Sinistro", "Entidade",
                     "Cod. Oficina", "Motivo", "Convencionada", "NLO", "Zona"
                 ])
 
                 buf = _io.BytesIO()
                 with pd.ExcelWriter(buf, engine="openpyxl") as writer:
                     df_export.to_excel(writer, index=False, sheet_name="Deslocações")
-                    # Formatar largura das colunas
                     ws = writer.sheets["Deslocações"]
-                    col_widths = [12, 12, 14, 14, 14, 14, 8, 25]
+                    col_widths = [13, 12, 12, 14, 16, 14, 12, 16, 6, 20]
                     for i, w in enumerate(col_widths, 1):
-                        ws.column_dimensions[
-                            ws.cell(1, i).column_letter
-                        ].width = w
+                        ws.column_dimensions[ws.cell(1, i).column_letter].width = w
+                    # Cabeçalho a negrito
+                    from openpyxl.styles import Font, PatternFill, Alignment
+                    for cell in ws[1]:
+                        cell.font = Font(bold=True)
+                        cell.fill = PatternFill("solid", fgColor="1A1A2E")
+                        cell.font = Font(bold=True, color="FFFFFF")
+                        cell.alignment = Alignment(horizontal="center")
                 buf.seek(0)
                 return buf.getvalue()
 
