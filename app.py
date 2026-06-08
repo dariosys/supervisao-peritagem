@@ -246,13 +246,12 @@ with col_left:
             st.session_state.marcados = set()
         if "excel_key" not in st.session_state:
             st.session_state.excel_key = ""
-
         excel_key = f"{len(df)}_{str(list(df.columns))}"
         if st.session_state.excel_key != excel_key:
             st.session_state.excel_key = excel_key
             st.session_state.marcados = set()
 
-        # ── 2 · Todos os sinistros ───────────────────────────────────────────
+        # ── 2 · Todos os sinistros — pesquisar e adicionar ───────────────────
         st.markdown('<p class="step-label" style="margin-top:20px">2 · Todos os sinistros</p>', unsafe_allow_html=True)
 
         search = st.text_input("🔍 Pesquisar", placeholder="nº sinistro, matrícula ou oficina…",
@@ -271,44 +270,52 @@ with col_left:
         if len(filtered_df) == 0:
             st.info("Nenhum sinistro encontrado.")
         else:
+            # Selectbox com todos os sinistros filtrados
+            opts = []
             for _, r in filtered_df.iterrows():
                 orig_idx = int(r["index"])
                 sin = str(r.get("Nº sinistro","")).strip()
                 mat = str(r.get("Matrícula","")).strip()
                 ofi = str(r.get("Nome da oficina","") or r.get("Nome prestador","")).strip()[:30]
-                marcado = orig_idx in st.session_state.marcados
+                ja = "✅" if orig_idx in st.session_state.marcados else "  "
+                opts.append((f"{ja}  {sin}  ·  {mat}  ·  {ofi}", orig_idx))
 
-                checked = st.checkbox(
-                    f"{sin}  ·  {mat}  ·  {ofi}",
-                    value=marcado,
-                    key=f"chk_{orig_idx}"
-                )
-                if checked and orig_idx not in st.session_state.marcados:
-                    st.session_state.marcados.add(orig_idx)
-                elif not checked and orig_idx in st.session_state.marcados:
-                    st.session_state.marcados.discard(orig_idx)
+            labels = [o[0] for o in opts]
+            escolha = st.selectbox("sinistro", labels, label_visibility="collapsed", key="sel_all")
+            idx_sel = opts[labels.index(escolha)][1]
+
+            # Botões Adicionar / Remover lado a lado
+            c1, c2 = st.columns(2)
+            with c1:
+                if st.button("✅  Adicionar aos meus", key="btn_add", use_container_width=True):
+                    st.session_state.marcados.add(idx_sel)
+                    st.rerun()
+            with c2:
+                if st.button("✖  Remover dos meus", key="btn_rem", use_container_width=True):
+                    st.session_state.marcados.discard(idx_sel)
+                    st.rerun()
 
         # ── 3 · Os meus sinistros ────────────────────────────────────────────
         n_marcados = len(st.session_state.marcados)
-        st.markdown(f'<p class="step-label" style="margin-top:24px; color:#C8102E">3 · Os meus sinistros ({n_marcados} marcado(s))</p>', unsafe_allow_html=True)
+        st.markdown(f'<p class="step-label" style="margin-top:24px">3 · Os meus sinistros&nbsp; <span style="background:#C8102E;color:white;border-radius:10px;padding:1px 8px;font-size:11px">{n_marcados}</span></p>', unsafe_allow_html=True)
 
         selected_row = None
 
         if n_marcados == 0:
-            st.info("Assinale sinistros na lista acima para os ver aqui.")
+            st.info("Adicione sinistros acima para os ver aqui.")
         else:
             meus_rows = df[df.index.isin(st.session_state.marcados)].reset_index(drop=False)
-            options_meus = []
+            opts_meus = []
             for _, r in meus_rows.iterrows():
                 sin = str(r.get("Nº sinistro","")).strip()
                 mat = str(r.get("Matrícula","")).strip()
                 ofi = str(r.get("Nome da oficina","") or r.get("Nome prestador","")).strip()[:30]
-                options_meus.append((f"🔴 {sin}  ·  {mat}  ·  {ofi}", int(r["index"])))
+                opts_meus.append((f"🔴  {sin}  ·  {mat}  ·  {ofi}", int(r["index"])))
 
-            labels_meus = [o[0] for o in options_meus]
-            escolha = st.selectbox("Selecionar para gerar PDF", labels_meus,
-                                   label_visibility="visible", key="sel_meus")
-            orig_idx_meu = options_meus[labels_meus.index(escolha)][1]
+            labels_meus = [o[0] for o in opts_meus]
+            escolha_meu = st.selectbox("Selecionar para gerar PDF", labels_meus,
+                                       label_visibility="visible", key="sel_meus")
+            orig_idx_meu = opts_meus[labels_meus.index(escolha_meu)][1]
             selected_row = df.iloc[orig_idx_meu]
 
 with col_right:
