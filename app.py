@@ -46,19 +46,75 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-FIELD_MAP = {
+# ── Mapeamento campos PDF → colunas Excel ───────────────────────────────────
+# Suporta dois formatos de Excel: "antigo" e "novo" (Lista Semanal Auditorias)
+# A app deteta automaticamente qual o formato ao carregar o ficheiro.
+
+SUPERVISOR_FIXO = "Dário Pena"
+
+# Formato ANTIGO
+FIELD_MAP_ANTIGO = {
     "F[0].Page_1[0].TextField9[1]"    : "Nº sinistro",
     "F[0].Page_1[0].TextField9[4]"    : "Data/ Hora da Visita",
     "F[0].Page_1[0].TextField9[2]"    : "Matrícula",
     "F[0].Page_1[0].TextField9[0]"    : "Perito: Nome /Código",
+    "F[0].Page_1[0].TextField9[5]"    : "Perito: Código",       # código perito
     "F[0].Page_1[0].TextField9[6]"    : "Nome da oficina",
     "F[0].Page_1[0].TextField9[7]"    : "Nº prest ofic",
+    "F[0].Page_1[0].TextField9[8]"    : "Localidade",           # localidade
     "F[0].Page_1[0].TextField12[0]"   : "Observações",
     "F[0].Page_1[0].TextField12[1]"   : "Avalie o serviço do perito",
     "F[0].Page_1[0].TextField12[2]"   : "Avalie o serviço da oficina",
-    "F[0].Page_1[0].TextField9[3]"    : "supervisor",
     "F[0].Page_1[0].DateTimeField1[0]": "Data",
 }
+
+# Formato NOVO (Lista Semanal Auditorias)
+FIELD_MAP_NOVO = {
+    "F[0].Page_1[0].TextField9[1]"    : "Nº sinistro",
+    "F[0].Page_1[0].TextField9[4]"    : "Dt efect in",
+    "F[0].Page_1[0].TextField9[2]"    : "Matrícula",
+    "F[0].Page_1[0].TextField9[0]"    : "Nome prestador",       # Perito: Nome
+    "F[0].Page_1[0].TextField9[5]"    : "Prestador",            # Código do perito
+    "F[0].Page_1[0].TextField9[6]"    : "Nome da oficina",
+    "F[0].Page_1[0].TextField9[7]"    : "Nº prest ofic",
+    "F[0].Page_1[0].TextField9[8]"    : "Morada local prestação", # Localidade
+    "F[0].Page_1[0].DateTimeField1[0]": "Dt efect fim",
+}
+
+def detectar_formato(df):
+    """Deteta se o Excel é formato antigo ou novo."""
+    if "Dt efect in" in df.columns:
+        return "novo"
+    return "antigo"
+
+def get_field_map(df):
+    return FIELD_MAP_NOVO if detectar_formato(df) == "novo" else FIELD_MAP_ANTIGO
+
+# Preview fields adapta-se ao formato
+PREVIEW_FIELDS_ANTIGO = [
+    ("Nº Sinistro",  "Nº sinistro"),
+    ("Data Visita",  "Data/ Hora da Visita"),
+    ("Matrícula",    "Matrícula"),
+    ("Perito",       "Perito: Nome /Código"),
+    ("Oficina",      "Nome da oficina"),
+    ("Cód. Oficina", "Nº prest ofic"),
+    ("Supervisor",   "supervisor"),
+]
+
+PREVIEW_FIELDS_NOVO = [
+    ("Nº Sinistro",  "Nº sinistro"),
+    ("Data Visita",  "Dt efect in"),
+    ("Matrícula",    "Matrícula"),
+    ("Perito",       "Nome prestador"),
+    ("Cód. Perito",  "Prestador"),
+    ("Oficina",      "Nome da oficina"),
+    ("Cód. Oficina", "Nº prest ofic"),
+    ("Localidade",   "Morada local prestação"),
+    ("Marca/Modelo", "Marca"),
+]
+
+def get_preview_fields(df):
+    return PREVIEW_FIELDS_NOVO if detectar_formato(df) == "novo" else PREVIEW_FIELDS_ANTIGO
 
 PHOTO_RECTS = [
     (29.602,  129.542, 206.331, 259.189),
@@ -118,7 +174,8 @@ FRASES_OFICINA = [
 ]
 
 
-def fill_pdf_bytes(row, photo_bytes_list, texto_obs, texto_perito, texto_oficina):
+def fill_pdf_bytes(df, row, photo_bytes_list, texto_obs, texto_perito, texto_oficina):
+    field_map = get_field_map(df)
     template_bytes = get_template_bytes()
     reader = PdfReader(io.BytesIO(template_bytes))
     writer = PdfWriter()
@@ -126,7 +183,7 @@ def fill_pdf_bytes(row, photo_bytes_list, texto_obs, texto_perito, texto_oficina
     writer.set_need_appearances_writer(True)
 
     values = {}
-    for field_id, col in FIELD_MAP.items():
+    for field_id, col in field_map.items():
         val = row.get(col, "")
         if pd.isna(val):
             val = ""
@@ -134,17 +191,16 @@ def fill_pdf_bytes(row, photo_bytes_list, texto_obs, texto_perito, texto_oficina
             val = val.strftime("%d/%m/%Y")
         values[field_id] = str(val).strip()
 
-    # Sobrepor com textos escolhidos na app (têm prioridade sobre o Excel)
-    FIELD_OBS    = "F[0].Page_1[0].TextField12[0]"
-    FIELD_PERITO = "F[0].Page_1[0].TextField12[1]"
-    FIELD_OFIC   = "F[0].Page_1[0].TextField12[2]"
-    if texto_obs:    values[FIELD_OBS]    = texto_obs
-    if texto_perito: values[FIELD_PERITO] = texto_perito
-    if texto_oficina: values[FIELD_OFIC]  = texto_oficina
+    # Supervisor sempre fixo
+    values["F[0].Page_1[0].TextField9[3]"] = SUPERVISOR_FIXO
+
+    # Textos escolhidos na app
+    if texto_obs:     values["F[0].Page_1[0].TextField12[0]"] = texto_obs
+    if texto_perito:  values["F[0].Page_1[0].TextField12[1]"] = texto_perito
+    if texto_oficina: values["F[0].Page_1[0].TextField12[2]"] = texto_oficina
 
     writer.update_page_form_field_values(writer.pages[0], values)
 
-    # Stamp photos on top (merge_page preserves /Annots = fields stay editable)
     active = [p for p in photo_bytes_list if p is not None]
     if active:
         page = reader.pages[0]
@@ -178,7 +234,9 @@ with col_left:
     if excel_file:
         try:
             df = pd.read_excel(excel_file)
-            st.success(f"✓ {len(df)} sinistro(s) carregado(s)")
+            fmt = detectar_formato(df)
+            fmt_label = "🆕 Formato novo (Lista Semanal)" if fmt == "novo" else "📄 Formato antigo"
+            st.success(f"✓ {len(df)} sinistro(s) carregado(s) · {fmt_label}")
         except Exception as e:
             st.error(f"Erro ao ler Excel: {e}")
 
@@ -217,12 +275,17 @@ with col_right:
     st.markdown('<p class="step-label">Dados do sinistro selecionado</p>', unsafe_allow_html=True)
 
     if selected_row is not None:
+        preview_fields = get_preview_fields(df)
         rows_html = ""
-        for label, col in PREVIEW_FIELDS:
+        for label, col in preview_fields:
             val = selected_row.get(col, "")
             if pd.isna(val): val = "—"
             elif hasattr(val, "strftime"): val = val.strftime("%d/%m/%Y")
             else: val = str(val).strip() or "—"
+            # Para Marca/Modelo juntar os dois campos
+            if label == "Marca/Modelo":
+                modelo = str(selected_row.get("Modelo", "")).strip()
+                val = f"{val} {modelo}".strip() if val != "—" else "—"
             rows_html += f'<div class="info-row"><span class="info-key">{label}</span><span class="info-val">{val}</span></div>'
         st.markdown(f'<div class="info-card">{rows_html}</div>', unsafe_allow_html=True)
     else:
@@ -245,7 +308,6 @@ with col_right:
                 except:
                     pass
 
-    # ── Frases pré-definidas ─────────────────────────────────────────────────
     st.markdown('<p class="step-label" style="margin-top:24px">4 · Textos do relatório</p>', unsafe_allow_html=True)
 
     # Inicializar session_state para os três campos
@@ -295,7 +357,7 @@ with col_right:
     if st.button("⬇ Gerar e Descarregar PDF", disabled=not can_generate):
         with st.spinner("A gerar PDF..."):
             try:
-                pdf_bytes = fill_pdf_bytes(selected_row, photo_bytes_list,
+                pdf_bytes = fill_pdf_bytes(df, selected_row, photo_bytes_list,
                                            texto_obs, texto_perito, texto_oficina)
                 sinistro = str(selected_row.get("Nº sinistro","sinistro")).strip()
                 mat = str(selected_row.get("Matrícula","")).strip().replace("-","")
