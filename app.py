@@ -318,6 +318,68 @@ with col_left:
             orig_idx_meu = opts_meus[labels_meus.index(escolha_meu)][1]
             selected_row = df.iloc[orig_idx_meu]
 
+            # ── Exportar Excel ────────────────────────────────────────────────
+            st.markdown("---")
+
+            def gerar_excel_export(meus_rows_df):
+                import io as _io
+                export_rows = []
+                for _, r in meus_rows_df.iterrows():
+                    # Deslocação = data do PDF (Dt efect in ou Data/ Hora da Visita)
+                    data_val = r.get("Dt efect in", r.get("Data/ Hora da Visita", ""))
+                    if hasattr(data_val, "strftime"):
+                        data_val = data_val.strftime("%d/%m/%Y")
+                    elif pd.isna(data_val):
+                        data_val = ""
+                    else:
+                        data_val = str(data_val).strip()
+
+                    sinistro = str(r.get("Nº sinistro", "")).strip()
+                    cod_oficina = str(r.get("Nº prest ofic", "")).strip()
+                    zona = str(r.get("Morada local prestação", r.get("Localidade", ""))).strip()
+                    if pd.isna(zona) or zona == "nan": zona = ""
+
+                    export_rows.append({
+                        "Deslocação"  : data_val,
+                        "Ocorrência"  : "",
+                        "Sinistro"    : sinistro,
+                        "Cod. Oficina": cod_oficina,
+                        "Motivo"      : "",
+                        "Convencionada": "",
+                        "NLO"         : "",
+                        "Zona"        : zona,
+                    })
+
+                df_export = pd.DataFrame(export_rows, columns=[
+                    "Deslocação", "Ocorrência", "Sinistro",
+                    "Cod. Oficina", "Motivo", "Convencionada", "NLO", "Zona"
+                ])
+
+                buf = _io.BytesIO()
+                with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+                    df_export.to_excel(writer, index=False, sheet_name="Deslocações")
+                    # Formatar largura das colunas
+                    ws = writer.sheets["Deslocações"]
+                    col_widths = [12, 12, 14, 14, 14, 14, 8, 25]
+                    for i, w in enumerate(col_widths, 1):
+                        ws.column_dimensions[
+                            ws.cell(1, i).column_letter
+                        ].width = w
+                buf.seek(0)
+                return buf.getvalue()
+
+            excel_bytes = gerar_excel_export(meus_rows)
+            from datetime import date
+            nome_ficheiro = f"deslocacoes_{date.today().strftime('%Y%m%d')}.xlsx"
+
+            st.download_button(
+                label="📊  Exportar lista para Excel",
+                data=excel_bytes,
+                file_name=nome_ficheiro,
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True,
+            )
+
 with col_right:
     st.markdown('<p class="step-label">Dados do sinistro selecionado</p>', unsafe_allow_html=True)
 
