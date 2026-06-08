@@ -241,16 +241,26 @@ with col_left:
             st.error(f"Erro ao ler Excel: {e}")
 
     if df is not None:
-        st.markdown('<p class="step-label" style="margin-top:20px">2 · Selecionar sinistro</p>', unsafe_allow_html=True)
+        # ── Inicializar marcações na session_state ───────────────────────────
+        excel_key = f"marcados_{len(df)}_{list(df.columns)}"
+        if "marcados" not in st.session_state:
+            st.session_state.marcados = set()
+        # Reset se carregou um Excel diferente
+        if st.session_state.get("excel_key") != excel_key:
+            st.session_state.excel_key = excel_key
+            st.session_state.marcados = set()
 
-        search = st.text_input("Pesquisar", placeholder="ex: 28765768 ou AH-79-JN", label_visibility="collapsed")
+        # ── 2 · Todos os sinistros (com marcação) ────────────────────────────
+        st.markdown('<p class="step-label" style="margin-top:20px">2 · Todos os sinistros</p>', unsafe_allow_html=True)
+
+        search = st.text_input("🔍 Pesquisar", placeholder="nº sinistro, matrícula ou oficina…", label_visibility="collapsed")
 
         mask = pd.Series([True] * len(df))
         if search.strip():
             q = search.strip().lower()
             mask = df.apply(
                 lambda r: any(q in str(r.get(c,"")).lower()
-                              for c in ["Nº sinistro","Matrícula","Nome da oficina"]),
+                              for c in ["Nº sinistro","Matrícula","Nome da oficina","Nome prestador"]),
                 axis=1
             )
 
@@ -259,17 +269,69 @@ with col_left:
         if len(filtered_df) == 0:
             st.info("Nenhum sinistro encontrado.")
         else:
-            options = []
+            # Construir linhas com checkbox + cor
+            rows_list_html = ""
             for _, r in filtered_df.iterrows():
+                orig_idx = int(r["index"])
                 sin = str(r.get("Nº sinistro","")).strip()
                 mat = str(r.get("Matrícula","")).strip()
-                ofi = str(r.get("Nome da oficina","")).strip()[:35]
-                options.append(f"{sin}  ·  {mat}  ·  {ofi}")
+                ofi = str(r.get("Nome da oficina","") or r.get("Nome prestador","")).strip()[:28]
+                marcado = orig_idx in st.session_state.marcados
+                cor = "#C8102E" if marcado else "#1A1A2E"
+                icone = "✅" if marcado else "☐"
+                rows_list_html += f'<div style="color:{cor};padding:3px 6px;font-size:13px;border-bottom:1px solid #F3F4F6">{icone} {sin} · {mat} · {ofi}</div>'
 
-            choice = st.selectbox("Sinistro", options, label_visibility="collapsed")
-            chosen_idx = options.index(choice)
-            orig_idx = filtered_df.iloc[chosen_idx]["index"]
-            selected_row = df.iloc[orig_idx]
+            st.markdown(f'<div style="background:white;border:1px solid #E5E7EB;border-radius:6px;max-height:220px;overflow-y:auto;margin-bottom:8px">{rows_list_html}</div>', unsafe_allow_html=True)
+
+            # Selectbox para marcar/desmarcar
+            col_sel, col_btn = st.columns([3, 1])
+            with col_sel:
+                options_all = []
+                for _, r in filtered_df.iterrows():
+                    orig_idx = int(r["index"])
+                    sin = str(r.get("Nº sinistro","")).strip()
+                    mat = str(r.get("Matrícula","")).strip()
+                    ofi = str(r.get("Nome da oficina","") or r.get("Nome prestador","")).strip()[:25]
+                    marcado = orig_idx in st.session_state.marcados
+                    prefixo = "✅" if marcado else "☐"
+                    options_all.append((f"{prefixo} {sin} · {mat} · {ofi}", orig_idx))
+
+                labels_all = [o[0] for o in options_all]
+                escolha_all = st.selectbox("sinistro_all", labels_all, label_visibility="collapsed", key="sel_all")
+                idx_escolhido = options_all[labels_all.index(escolha_all)][1]
+
+            with col_btn:
+                ja_marcado = idx_escolhido in st.session_state.marcados
+                btn_label = "✅ Marcar" if not ja_marcado else "✖ Retirar"
+                if st.button(btn_label, key="btn_marcar"):
+                    if ja_marcado:
+                        st.session_state.marcados.discard(idx_escolhido)
+                    else:
+                        st.session_state.marcados.add(idx_escolhido)
+                    st.rerun()
+
+        # ── 3 · Os meus sinistros ────────────────────────────────────────────
+        n_marcados = len(st.session_state.marcados)
+        st.markdown(f'<p class="step-label" style="margin-top:20px">3 · Os meus sinistros ({n_marcados} marcado(s))</p>', unsafe_allow_html=True)
+
+        selected_row = None
+
+        if n_marcados == 0:
+            st.info("Marque sinistros na lista acima para os ver aqui.")
+        else:
+            meus_df = df[df.index.isin(st.session_state.marcados)].reset_index(drop=False)
+            options_meus = []
+            for _, r in meus_df.iterrows():
+                sin = str(r.get("Nº sinistro","")).strip()
+                mat = str(r.get("Matrícula","")).strip()
+                ofi = str(r.get("Nome da oficina","") or r.get("Nome prestador","")).strip()[:30]
+                options_meus.append((f"🔴 {sin} · {mat} · {ofi}", int(r["index"])))
+
+            labels_meus = [o[0] for o in options_meus]
+            escolha_meu = st.selectbox("Os meus sinistros", labels_meus,
+                                        label_visibility="collapsed", key="sel_meus")
+            orig_idx_meu = options_meus[labels_meus.index(escolha_meu)][1]
+            selected_row = df.iloc[orig_idx_meu]
 
 with col_right:
     st.markdown('<p class="step-label">Dados do sinistro selecionado</p>', unsafe_allow_html=True)
