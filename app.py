@@ -3,6 +3,81 @@ Ficha de Supervisão de Peritagem — App Web
 Tranquilidade · Açoreana · Logo
 """
 
+ZONAS_OFICIAIS = [
+    "Abrantes",
+    "Algés",
+    "Almada",
+    "Amadora",
+    "Angra do Heroísmo",
+    "Arruda dos Vinhos",
+    "Aveiro",
+    "Barreiro",
+    "Beja",
+    "Braga",
+    "Bragança",
+    "Caldas da Rainha",
+    "Cascais",
+    "Castelo Branco",
+    "Centro de Colisão de Coimbra",
+    "Centro de Colisão de Corroios",
+    "Centro de Colisão de Figo Maduro",
+    "Centro de Colisão de Guimarães",
+    "Centro de Colisão de Leiria",
+    "Centro de Colisão de Lisboa",
+    "Centro de Colisão de Setúbal",
+    "Centro de Colisão do Porto",
+    "Chaves",
+    "Coimbra",
+    "Covilhã",
+    "Elvas",
+    "Évora",
+    "Faro",
+    "Gondomar",
+    "Guarda",
+    "Guimarães",
+    "Leiria",
+    "Lisboa 1",
+    "Lisboa 2",
+    "Loures 1",
+    "Loures 2",
+    "Madeira",
+    "Matosinhos",
+    "Montijo",
+    "Odivelas",
+    "Penafiel",
+    "Pico",
+    "Ponta Delgada",
+    "Portalegre",
+    "Portimão",
+    "Porto",
+    "Póvoa de Varzim",
+    "S. João da Madeira",
+    "Santarém",
+    "Santiago do Cacém",
+    "Setúbal",
+    "Sintra 1",
+    "Sintra 2",
+    "Tomar",
+    "Torres Vedras",
+    "Viana do Castelo",
+    "Vila Franca de Xira",
+    "Vila Nova de Famalicão",
+    "Vila Nova de Gaia",
+    "Vila Real",
+    "Vila Real de Sto. António",
+    "Viseu",
+]
+
+# Criar dicionário automático sem acentos → com acentos
+import unicodedata
+
+def normalizar(s):
+    return ''.join(c for c in unicodedata.normalize('NFD', s)
+                   if unicodedata.category(c) != 'Mn').upper()
+
+MAPA_ZONAS = { normalizar(z): z for z in ZONAS_OFICIAIS }
+
+
 import streamlit as st
 import pandas as pd
 from pypdf import PdfReader, PdfWriter
@@ -408,8 +483,13 @@ with col_left:
                     convencionada = "Sim" if "CONVENCIONADA" in convencionada_raw.upper() else "Não"
 
                     # Zona — Morada local prestação ou Localidade
-                    zona = str(r.get("Morada local prestação", r.get("Localidade", ""))).strip()
-                    if zona == "nan": zona = ""
+                    zona_raw = str(r.get("Morada local prestação", r.get("Localidade", ""))).strip()
+                    if zona_raw == "nan":
+                        zona_raw = ""
+                    
+                    zona_norm = normalizar(zona_raw)
+                    zona = MAPA_ZONAS.get(zona_norm, zona_raw)
+
 
                     export_rows.append({
                         "Deslocação"   : data_str,
