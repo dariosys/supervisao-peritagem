@@ -103,6 +103,7 @@ PREVIEW_FIELDS_ANTIGO = [
     ("Perito",       "Perito: Nome /Código"),
     ("Oficina",      "Nome da oficina"),
     ("Cód. Oficina", "Nº prest ofic"),
+    ("Nº ocorrência", "Nº ocorrência"),   # ← ADICIONAR AQUI
     ("Supervisor",   "supervisor"),
 ]
 
@@ -116,6 +117,7 @@ PREVIEW_FIELDS_NOVO = [
     ("Cód. Oficina", "Nº prest ofic"),
     ("Localidade",   "Morada local prestação"),
     ("Marca/Modelo", "Marca"),
+    ("Nº ocorrência", "Nº ocorrência"),   # ← ADICIONAR AQUI
 ]
 
 def get_preview_fields(df):
@@ -405,7 +407,7 @@ with col_left:
                     export_rows.append({
                         "Deslocação"   : data_str,
                         "Mês"          : mes_str,
-                        "Ocorrência"   : "",
+                        "Ocorrência"   : str(r.get("Nº ocorrência", "")).strip(),
                         "Sinistro"     : sinistro,
                         "Entidade"     : entidade,
                         "Cod. Oficina" : cod_oficina,
