@@ -281,7 +281,7 @@ with col_left:
         excel_key = f"{len(df)}_{str(list(df.columns))}"
         if st.session_state.excel_key != excel_key:
             st.session_state.excel_key = excel_key
-            st.session_state.marcados = set()
+            st.session_state.marcados = []
 
         # ── 2 · Todos os sinistros — pesquisar e adicionar ───────────────────
         st.markdown('<p class="step-label" style="margin-top:20px">2 · Todos os sinistros</p>', unsafe_allow_html=True)
