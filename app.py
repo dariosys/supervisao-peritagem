@@ -492,8 +492,8 @@ with col_left:
 
 
                     export_rows.append({
-                        "Deslocação"   : data_str,
-                        "Mês"          : mes_str,
+                        "Deslocação"   : "",
+                        "Mês"          : "",
                         "Ocorrência"   : str(r.get("Nº ocorrência", "")).strip(),
                         "Sinistro"     : sinistro,
                         "Entidade"     : entidade,
