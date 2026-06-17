@@ -394,12 +394,14 @@ with col_left:
 
                     # Cod. Oficina
                     cod_raw = r.get("Nº prest ofic", "")
+                    
                     if isinstance(cod_raw, float) and cod_raw.is_integer():
-                    cod_oficina = str(int(cod_raw))
+                        cod_oficina = str(int(cod_raw))
                     else:
-                    cod_oficina = str(cod_raw).strip()
-
-                    if cod_oficina == "nan": cod_oficina = ""
+                        cod_oficina = str(cod_raw).strip()
+                    
+                    if cod_oficina == "nan":
+                        cod_oficina = ""
 
                     convencionada_raw = str(r.get("Desc.Tipo Oficina", "")).strip()
                     if convencionada_raw == "nan": convencionada_raw = ""
