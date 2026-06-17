@@ -275,7 +275,7 @@ with col_left:
     if df is not None:
         # ── Inicializar marcações na session_state ───────────────────────────
         if "marcados" not in st.session_state:
-            st.session_state.marcados = set()
+            st.session_state.marcados = []
         if "excel_key" not in st.session_state:
             st.session_state.excel_key = ""
         excel_key = f"{len(df)}_{str(list(df.columns))}"
@@ -320,11 +320,13 @@ with col_left:
             c1, c2 = st.columns(2)
             with c1:
                 if st.button("✅  Adicionar aos meus", key="btn_add", use_container_width=True):
-                    st.session_state.marcados.add(idx_sel)
+                    if idx_sel not in st.session_state.marcados:
+                        st.session_state.marcados.append(idx_sel)
                     st.rerun()
             with c2:
                 if st.button("✖  Remover dos meus", key="btn_rem", use_container_width=True):
-                    st.session_state.marcados.discard(idx_sel)
+                    if idx_sel in st.session_state.marcados:
+                        st.session_state.marcados.remove(idx_sel)
                     st.rerun()
 
         # ── 3 · Os meus sinistros ────────────────────────────────────────────
@@ -336,7 +338,7 @@ with col_left:
         if n_marcados == 0:
             st.info("Adicione sinistros acima para os ver aqui.")
         else:
-            meus_rows = df[df.index.isin(st.session_state.marcados)].reset_index(drop=False)
+            meus_rows = df.loc[st.session_state.marcados].reset_index(drop=False)
             opts_meus = []
             for _, r in meus_rows.iterrows():
                 sin = str(r.get("Nº sinistro","")).strip()
