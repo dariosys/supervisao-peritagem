@@ -475,7 +475,7 @@ with col_right:
 
     for i, pcol in enumerate(photo_cols):
         with pcol:
-            uploaded = st.file_uploader(f"Foto {i+1}", type=["jpg","jpeg","png","bmp","webp"],
+            uploaded = st.file_uploader(f"Foto {i+1}", type=["jpg","jpeg","png","bmp","webp","heic","heif"],
                                         key=f"photo_{i}", label_visibility="visible")
             if uploaded:
                 raw = uploaded.read()
