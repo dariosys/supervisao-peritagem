@@ -209,6 +209,11 @@ def fill_pdf_bytes(df, row, photo_bytes_list, texto_obs, texto_perito, texto_ofi
             val = val.strftime("%d/%m/%Y")
         values[field_id] = str(val).strip()
 
+    # Forçar datas a ficarem em branco e editáveis
+    values["F[0].Page_1[0].TextField9[4]"] = ""          # Data/Hora da Visita
+    values["F[0].Page_1[0].DateTimeField1[0]"] = ""      # Data assinatura supervisor
+
+
     # Supervisor sempre fixo
     values["F[0].Page_1[0].TextField9[3]"] = SUPERVISOR_FIXO
 
