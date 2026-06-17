@@ -207,6 +207,10 @@ def fill_pdf_bytes(df, row, photo_bytes_list, texto_obs, texto_perito, texto_ofi
             val = ""
         if hasattr(val, "strftime"):
             val = val.strftime("%d/%m/%Y")
+        # Remover ".0" de códigos numéricos (oficina, prestador, etc.)
+        if isinstance(val, float) and val.is_integer():
+             val = int(val)
+            
         values[field_id] = str(val).strip()
 
     # Forçar datas a ficarem em branco e editáveis
