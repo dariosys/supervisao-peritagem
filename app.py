@@ -188,7 +188,8 @@ FRASES_PERITO = [
 
 FRASES_OFICINA = [
     "— Sem avaliação —",
-    "Responsável da oficina foi prestável e atencioso! Analisamos os trabalhos que estão a ser realizados no veículo sinistrado, onde certificamos que a reparação está a ser realizada de acordo com o R.P. que foi elaborado pelo colega Perito.",
+    "Responsável da oficina foi prestável e atencioso! 
+    Analisamos os trabalhos que estão a ser realizados no veículo sinistrado, onde certificamos que a reparação está a ser realizada de acordo com o R.P. que foi elaborado pelo colega Perito.",
 ]
 
 
