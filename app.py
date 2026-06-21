@@ -478,6 +478,17 @@ with col_left:
                     if cod_oficina == "nan":
                         cod_oficina = ""
 
+                    # Ocorrência
+                    ocorr_raw = r.get("Nº ocorrência", "")
+                    if isinstance(ocorr_raw, float) and ocorr_raw.is_integer():
+                        ocorrencia = str(int(ocorr_raw))
+                    else:
+                        ocorrencia = str(ocorr_raw).strip()
+
+                    if ocorrencia == "nan":
+                        ocorrencia = ""
+
+
                     convencionada_raw = str(r.get("Desc.Tipo Oficina", "")).strip()
                     if convencionada_raw == "nan": convencionada_raw = ""
                     convencionada = "Sim" if "CONVENCIONADA" in convencionada_raw.upper() else "Não"
@@ -494,7 +505,7 @@ with col_left:
                     export_rows.append({
                         "Deslocação"   : "",
                         "Mês"          : "",
-                        "Ocorrência"   : str(r.get("Nº ocorrência", "")).strip(),
+                        "Ocorrência"   : ocorrencia,
                         "Sinistro"     : sinistro,
                         "Entidade"     : entidade,
                         "Cod. Oficina" : cod_oficina,
