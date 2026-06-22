@@ -217,42 +217,54 @@ PREVIEW_FIELDS = [
 def create_image_overlay(pw, ph, photo_bytes_list):
     packet = io.BytesIO()
     c = rl_canvas.Canvas(packet, pagesize=(pw, ph))
+
     for photo_bytes, rect in zip(photo_bytes_list, PHOTO_RECTS):
         if photo_bytes is None:
             continue
+
         x0, y0, x1, y1 = rect
         cell_w = x1 - x0
         cell_h = y1 - y0
         pad = 3
         draw_w = cell_w - pad * 2
         draw_h = cell_h - pad * 2
+
         try:
             img = Image.open(io.BytesIO(photo_bytes)).convert("RGB")
             orig_w, orig_h = img.size
 
-            # Calcular escala para preencher a célula mantendo proporção
             scale = min(draw_w / orig_w, draw_h / orig_h)
             final_w = orig_w * scale
             final_h = orig_h * scale
 
-            # Centrar na célula
             ix = x0 + pad + (draw_w - final_w) / 2
             iy = y0 + pad + (draw_h - final_h) / 2
 
-            # Guardar em buffer PNG com máxima qualidade (sem reduzir pixels)
             img_buf = io.BytesIO()
             img.save(img_buf, format="JPEG", quality=85)
             img_buf.seek(0)
 
-            # Usar ImageReader para alta qualidade — preserva todos os pixels originais
             from reportlab.lib.utils import ImageReader
-            c.drawImage(ImageReader(img_buf), ix, iy, width=final_w, height=final_h,
-                        preserveAspectRatio=True, anchor="c")
+            c.drawImage(
+                ImageReader(img_buf),
+                ix, iy,
+                width=final_w,
+                height=final_h,
+                preserveAspectRatio=True,
+                anchor="c"
+            )
+
         except Exception as e:
             st.warning(f"Erro ao processar foto: {e}")
+
+    # 🔥 LINHA CRÍTICA — evita PDF temporário vazio
+    c.setPageCompression(1)
+
     c.save()
     packet.seek(0)
-    return packet
+
+    # 🔥 LINHA CRÍTICA — devolve bytes reais, não o buffer cru
+    return packet.getvalue()
 
 # ── Frases pré-definidas ─────────────────────────────────────────────────────
 FRASES_OBSERVACOES = [
