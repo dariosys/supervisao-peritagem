@@ -320,8 +320,6 @@ def fill_pdf_bytes(df, row, photo_bytes_list, texto_obs, texto_perito, texto_ofi
     if texto_perito:  values["F[0].Page_1[0].TextField12[1]"] = texto_perito
     if texto_oficina: values["F[0].Page_1[0].TextField12[2]"] = texto_oficina
 
-    writer.update_page_form_field_values(writer.pages[0], values)
-
     active = [p for p in photo_bytes_list if p is not None]
     if active:
         page = reader.pages[0]
@@ -331,6 +329,8 @@ def fill_pdf_bytes(df, row, photo_bytes_list, texto_obs, texto_perito, texto_ofi
         overlay_buf = io.BytesIO(overlay_bytes)
         overlay_page = PdfReader(overlay_buf).pages[0]
         writer.pages[0].merge_page(overlay_page)
+
+    writer.update_page_form_field_values(writer.pages[0], values)
 
     output = io.BytesIO()
     writer.write(output)
