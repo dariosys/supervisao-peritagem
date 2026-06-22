@@ -327,7 +327,8 @@ def fill_pdf_bytes(df, row, photo_bytes_list, texto_obs, texto_perito, texto_ofi
         page = reader.pages[0]
         pw = float(page.mediabox.width)
         ph = float(page.mediabox.height)
-        overlay_buf = create_image_overlay(pw, ph, photo_bytes_list)
+        overlay_bytes = create_image_overlay(pw, ph, photo_bytes_list)
+        overlay_buf = io.BytesIO(overlay_bytes)
         overlay_page = PdfReader(overlay_buf).pages[0]
         writer.pages[0].merge_page(overlay_page)
 
