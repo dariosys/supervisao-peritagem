@@ -651,7 +651,7 @@ with col_right:
     if not can_generate:
         st.info("Carregue o Excel e selecione um sinistro para gerar o PDF.")
 
-    if st.button("⬇ Gerar e Descarregar PDF", disabled=not can_generate):
+   if st.button("⬇ Gerar e Descarregar PDF", disabled=not can_generate):
     with st.spinner("A gerar PDF..."):
         try:
             pdf_bytes = fill_pdf_bytes(
