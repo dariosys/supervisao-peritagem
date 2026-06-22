@@ -659,13 +659,30 @@ with col_right:
                 sinistro = str(selected_row.get("Nº sinistro","sinistro")).strip()
                 mat = str(selected_row.get("Matrícula","")).strip().replace("-","")
                 filename = f"supervisao_{sinistro}_{mat}.pdf"
-                st.download_button(
-                    label="📥 Clique aqui para descarregar o PDF",
-                    data=pdf_bytes,
-                    file_name=filename,
-                    mime="application/pdf",
-                    use_container_width=True,
-                )
+                import base64
+
+pdf_b64 = base64.b64encode(pdf_bytes).decode()
+
+href = f'''
+    <a href="data:application/pdf;base64,{pdf_b64}"
+       download="{filename}"
+       style="
+           display:block;
+           background:#C8102E;
+           color:white;
+           padding:12px 20px;
+           text-align:center;
+           border-radius:6px;
+           font-weight:600;
+           text-decoration:none;
+           margin-top:10px;
+       ">
+       📥 Descarregar PDF Final
+    </a>
+'''
+
+st.markdown(href, unsafe_allow_html=True)
+
                 st.success(f"✓ PDF gerado com campos editáveis: {filename}")
             except Exception as e:
                 st.error(f"Erro ao gerar PDF: {e}")
