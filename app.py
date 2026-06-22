@@ -687,5 +687,5 @@ with col_right:
                 st.markdown(href, unsafe_allow_html=True)
                 st.success(f"✓ PDF gerado com campos editáveis: {filename}")
 
-        except Exception as e:
+            except Exception as e:
                 st.error(f"Erro ao gerar PDF: {e}")
