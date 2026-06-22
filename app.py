@@ -241,7 +241,7 @@ def create_image_overlay(pw, ph, photo_bytes_list):
 
             # Guardar em buffer PNG com máxima qualidade (sem reduzir pixels)
             img_buf = io.BytesIO()
-            img.save(img_buf, format="PNG", optimize=False, compress_level=1)
+            img.save(img_buf, format="JPEG", quality=85)
             img_buf.seek(0)
 
             # Usar ImageReader para alta qualidade — preserva todos os pixels originais
