@@ -666,7 +666,7 @@ with col_right:
             import base64
             pdf_b64 = base64.b64encode(pdf_bytes).decode()
 
-            href = f'''
+            href = f"""
                 <a href="data:application/pdf;base64,{pdf_b64}"
                    download="{filename}"
                    style="
@@ -682,7 +682,7 @@ with col_right:
                    ">
                    📥 Descarregar PDF Final
                 </a>
-            '''
+            """
 
             st.markdown(href, unsafe_allow_html=True)
             st.success(f"✓ PDF gerado com campos editáveis: {filename}")
