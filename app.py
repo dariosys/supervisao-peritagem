@@ -663,7 +663,6 @@ with col_right:
             mat = str(selected_row.get("Matrícula", "")).strip().replace("-", "")
             filename = f"supervisao_{sinistro}_{mat}.pdf"
 
-            # 🔥 BOTÃO HTML QUE FORÇA DOWNLOAD (SEM ABRIR NO CHROME)
             import base64
             pdf_b64 = base64.b64encode(pdf_bytes).decode()
 
