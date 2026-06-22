@@ -651,41 +651,41 @@ with col_right:
     if not can_generate:
         st.info("Carregue o Excel e selecione um sinistro para gerar o PDF.")
 
-   if st.button("⬇ Gerar e Descarregar PDF", disabled=not can_generate):
-    with st.spinner("A gerar PDF..."):
-        try:
-            pdf_bytes = fill_pdf_bytes(
+    if st.button("⬇ Gerar e Descarregar PDF", disabled=not can_generate):
+        with st.spinner("A gerar PDF..."):
+            try:
+                pdf_bytes = fill_pdf_bytes(
                 df, selected_row, photo_bytes_list,
                 texto_obs, texto_perito, texto_oficina
-            )
+                )
 
-            sinistro = str(selected_row.get("Nº sinistro", "sinistro")).strip()
-            mat = str(selected_row.get("Matrícula", "")).strip().replace("-", "")
-            filename = f"supervisao_{sinistro}_{mat}.pdf"
+                sinistro = str(selected_row.get("Nº sinistro", "sinistro")).strip()
+                mat = str(selected_row.get("Matrícula", "")).strip().replace("-", "")
+                filename = f"supervisao_{sinistro}_{mat}.pdf"
 
-            import base64
-            pdf_b64 = base64.b64encode(pdf_bytes).decode()
+                import base64
+                pdf_b64 = base64.b64encode(pdf_bytes).decode()
 
-            href = f"""
-                <a href="data:application/pdf;base64,{pdf_b64}"
-                   download="{filename}"
-                   style="
-                       display:block;
-                       background:#C8102E;
-                       color:white;
-                       padding:12px 20px;
-                       text-align:center;
-                       border-radius:6px;
-                       font-weight:600;
-                       text-decoration:none;
-                       margin-top:10px;
-                   ">
-                   📥 Descarregar PDF Final
-                </a>
-            """
+                href = f"""
+                    <a href="data:application/pdf;base64,{pdf_b64}"
+                       download="{filename}"
+                       style="
+                           display:block;
+                           background:#C8102E;
+                           color:white;
+                           padding:12px 20px;
+                           text-align:center;
+                           border-radius:6px;
+                           font-weight:600;
+                           text-decoration:none;
+                           margin-top:10px;
+                       ">
+                       📥 Descarregar PDF Final
+                    </a>
+                """
 
-            st.markdown(href, unsafe_allow_html=True)
-            st.success(f"✓ PDF gerado com campos editáveis: {filename}")
+                st.markdown(href, unsafe_allow_html=True)
+                st.success(f"✓ PDF gerado com campos editáveis: {filename}")
 
         except Exception as e:
-            st.error(f"Erro ao gerar PDF: {e}")
+                st.error(f"Erro ao gerar PDF: {e}")
