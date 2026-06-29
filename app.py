@@ -465,10 +465,10 @@ else:
     selected_row = df_total.iloc[orig_idx_meu]
 
 
-            # ── Exportar Excel ────────────────────────────────────────────────
-            st.markdown("---")
+# ── Exportar Excel ────────────────────────────────────────────────
+st.markdown("---")
 
-            MESES_PT = {
+MESES_PT = {
                 1:"Janeiro", 2:"Fevereiro", 3:"Março", 4:"Abril",
                 5:"Maio", 6:"Junho", 7:"Julho", 8:"Agosto",
                 9:"Setembro", 10:"Outubro", 11:"Novembro", 12:"Dezembro"
