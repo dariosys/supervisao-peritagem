@@ -431,28 +431,39 @@ if excel_file:
                         st.session_state.marcados.remove(idx_sel)
                     st.rerun()
 
-        # ── 3 · Os meus sinistros ────────────────────────────────────────────
-        n_marcados = len(st.session_state.marcados)
-        st.markdown(f'<p class="step-label" style="margin-top:24px">3 · Os meus sinistros&nbsp; <span style="background:#C8102E;color:white;border-radius:10px;padding:1px 8px;font-size:11px">{n_marcados}</span></p>', unsafe_allow_html=True)
+# ── 3 · Os meus sinistros ────────────────────────────────────────────
+n_marcados = len(st.session_state.marcados)
+st.markdown(
+    f'<p class="step-label" style="margin-top:24px">3 · Os meus sinistros&nbsp; '
+    f'<span style="background:#C8102E;color:white;border-radius:10px;padding:1px 8px;font-size:11px">{n_marcados}</span></p>',
+    unsafe_allow_html=True
+)
 
-        selected_row = None
+selected_row = None
 
-        if n_marcados == 0:
-            st.info("Adicione sinistros acima para os ver aqui.")
-        else:
-            meus_rows = df.loc[st.session_state.marcados].reset_index(drop=False)
-            opts_meus = []
-            for _, r in meus_rows.iterrows():
-                sin = str(r.get("Nº sinistro","")).strip()
-                mat = str(r.get("Matrícula","")).strip()
-                ofi = str(r.get("Nome da oficina","") or r.get("Nome prestador","")).strip()[:30]
-                opts_meus.append((f"🔴  {sin}  ·  {mat}  ·  {ofi}", int(r["index"])))
+if n_marcados == 0:
+    st.info("Adicione sinistros acima para os ver aqui.")
+else:
+    # Usar sempre o DataFrame guardado
+    df_total = st.session_state["df_total"]
 
-            labels_meus = [o[0] for o in opts_meus]
-            escolha_meu = st.selectbox("Selecionar para gerar PDF", labels_meus,
-                                       label_visibility="visible", key="sel_meus")
-            orig_idx_meu = opts_meus[labels_meus.index(escolha_meu)][1]
-            selected_row = df.iloc[orig_idx_meu]
+    # Filtrar apenas os sinistros marcados
+    meus_rows = df_total.loc[st.session_state.marcados].reset_index(drop=False)
+
+    opts_meus = []
+    for _, r in meus_rows.iterrows():
+        sin = str(r.get("Nº sinistro", "")).strip()
+        mat = str(r.get("Matrícula", "")).strip()
+        ofi = str(r.get("Nome da oficina", "") or r.get("Nome prestador", "")).strip()[:30]
+        opts_meus.append((f"🔴  {sin}  ·  {mat}  ·  {ofi}", int(r["index"])))
+
+    labels_meus = [o[0] for o in opts_meus]
+    escolha_meu = st.selectbox("Selecionar para gerar PDF", labels_meus,
+                               label_visibility="visible", key="sel_meus")
+
+    orig_idx_meu = opts_meus[labels_meus.index(escolha_meu)][1]
+    selected_row = df_total.iloc[orig_idx_meu]
+
 
             # ── Exportar Excel ────────────────────────────────────────────────
             st.markdown("---")
