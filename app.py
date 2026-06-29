@@ -355,12 +355,20 @@ with col_left:
 
     if excel_file:
         try:
-            df = pd.read_excel(excel_file)
+            # Carregar Excel apenas uma vez
+            if "df_total" not in st.session_state:
+            st.session_state["df_total"] = pd.read_excel(excel_file)
+
+            # Usar sempre o df_total guardado
+            df = st.session_state["df_total"]
+
             fmt = detectar_formato(df)
             fmt_label = "🆕 Formato novo (Lista Semanal)" if fmt == "novo" else "📄 Formato antigo"
             st.success(f"✓ {len(df)} sinistro(s) carregado(s) · {fmt_label}")
+
         except Exception as e:
             st.error(f"Erro ao ler Excel: {e}")
+
 
     if df is not None:
         # ── Inicializar marcações na session_state ───────────────────────────
@@ -379,15 +387,19 @@ with col_left:
         search = st.text_input("🔍 Pesquisar", placeholder="nº sinistro, matrícula ou oficina…",
                                label_visibility="collapsed", key="search_all")
 
-        mask = pd.Series([True] * len(df))
+        df_total = st.session_state["df_total"]
+
+        mask = pd.Series([True] * len(df_total))
         if search.strip():
             q = search.strip().lower()
-            mask = df.apply(
+            mask = df_total.apply(
                 lambda r: any(q in str(r.get(c,"")).lower()
-                              for c in ["Nº sinistro","Matrícula","Nome da oficina","Nome prestador"]),
+                          for c in ["Nº sinistro","Matrícula","Nome da oficina","Nome prestador"]),
                 axis=1
             )
-        filtered_df = df[mask].reset_index(drop=False)
+
+        filtered_df = df_total[mask].reset_index(drop=False)
+
 
         if len(filtered_df) == 0:
             st.info("Nenhum sinistro encontrado.")
