@@ -432,7 +432,11 @@ if excel_file:
                     st.rerun()
 
 # ── 3 · Os meus sinistros ────────────────────────────────────────────
+if "marcados" not in st.session_state:
+    st.session_state.marcados = []
+
 n_marcados = len(st.session_state.marcados)
+
 st.markdown(
     f'<p class="step-label" style="margin-top:24px">3 · Os meus sinistros&nbsp; '
     f'<span style="background:#C8102E;color:white;border-radius:10px;padding:1px 8px;font-size:11px">{n_marcados}</span></p>',
