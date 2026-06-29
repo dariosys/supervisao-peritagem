@@ -592,7 +592,7 @@ with col_right:
     st.markdown('<p class="step-label">Dados do sinistro selecionado</p>', unsafe_allow_html=True)
 
     if selected_row is not None:
-        preview_fields = get_preview_fields(df)
+        preview_fields = get_preview_fields(df_total)
         rows_html = ""
         for label, col in preview_fields:
             val = selected_row.get(col, "")
@@ -675,7 +675,7 @@ with col_right:
         with st.spinner("A gerar PDF..."):
             try:
                 pdf_bytes = fill_pdf_bytes(
-                df, selected_row, photo_bytes_list,
+                df_total, selected_row, photo_bytes_list,
                 texto_obs, texto_perito, texto_oficina
                 )
 
