@@ -350,24 +350,24 @@ with col_left:
     st.markdown('<p class="step-label">1 · Carregar Excel (mapa do dia)</p>', unsafe_allow_html=True)
     excel_file = st.file_uploader("Ficheiro Excel", type=["xlsx","xls"], label_visibility="collapsed", key="excel")
 
-    df = None
-    selected_row = None
+df = None
+selected_row = None
 
-    if excel_file:
-        try:
-            # Carregar Excel apenas uma vez
-            if "df_total" not in st.session_state:
+if excel_file:
+    try:
+        # Carregar Excel apenas uma vez
+        if "df_total" not in st.session_state:
             st.session_state["df_total"] = pd.read_excel(excel_file)
 
-            # Usar sempre o df_total guardado
-            df = st.session_state["df_total"]
+        # Usar sempre o df_total guardado
+        df = st.session_state["df_total"]
 
-            fmt = detectar_formato(df)
-            fmt_label = "🆕 Formato novo (Lista Semanal)" if fmt == "novo" else "📄 Formato antigo"
-            st.success(f"✓ {len(df)} sinistro(s) carregado(s) · {fmt_label}")
+        fmt = detectar_formato(df)
+        fmt_label = "🆕 Formato novo (Lista Semanal)" if fmt == "novo" else "📄 Formato antigo"
+        st.success(f"✓ {len(df)} sinistro(s) carregado(s) · {fmt_label}")
 
-        except Exception as e:
-            st.error(f"Erro ao ler Excel: {e}")
+    except Exception as e:
+        st.error(f"Erro ao ler Excel: {e}")
 
 
     if df is not None:
