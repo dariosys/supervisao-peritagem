@@ -588,7 +588,7 @@ else:
 with col_right:
     st.markdown('<p class="step-label">Dados do sinistro selecionado</p>', unsafe_allow_html=True)
 
-    if selected_row is not None:
+       if selected_row is not None:
         preview_fields = get_preview_fields(df_total)
         rows_html = ""
         for label, col in preview_fields:
@@ -602,46 +602,43 @@ with col_right:
             rows_html += f'<div class="info-row"><span class="info-key">{label}</span><span class="info-val">{val}</span></div>'
         st.markdown(f'<div class="info-card">{rows_html}</div>', unsafe_allow_html=True)
 
-    # ── 3 · Suporte fotográfico (até 3 fotos)
-    st.markdown('<p class="step-label" style="margin-top:24px">3 · Suporte fotográfico (até 3 fotos)</p>', unsafe_allow_html=True)
-    
-    photo_cols = st.columns(3)
-    photo_bytes_list = [None, None, None]
-    
-    # 🔥 chave única por sinistro
-    sinistro_id = str(selected_row.get("Nº sinistro", "")).strip() or str(orig_idx_meu)
-    
-    for i, pcol in enumerate(photo_cols):
-        with pcol:
-            uploaded = st.file_uploader(
-                f"Foto {i+1}",
-                type=["jpg","jpeg","png","bmp","webp","heic","heif"],
-                key=f"photo_uploader_{i}_{sinistro_id}",   # 🔥 CHAVE ÚNICA POR SINISTRO
-                label_visibility="visible"
-            )
-    
-            if uploaded:
-                raw = uploaded.read()
-                st.session_state[f"photo_bytes_{i}"] = raw
-            else:
-                # 🔥 se não há upload neste sinistro, fica a None
-                st.session_state[f"photo_bytes_{i}"] = None
-    
-            if st.session_state[f"photo_bytes_{i}"]:
-                try:
-                    st.image(
-                        Image.open(io.BytesIO(st.session_state[f"photo_bytes_{i}"])),
-                        use_container_width=True
-                    )
-                except:
-                    pass
-    
-            photo_bytes_list[i] = st.session_state[f"photo_bytes_{i}"]
+        # ── 3 · Suporte fotográfico (até 3 fotos)
+        st.markdown('<p class="step-label" style="margin-top:24px">3 · Suporte fotográfico (até 3 fotos)</p>', unsafe_allow_html=True)
 
+        photo_cols = st.columns(3)
+        photo_bytes_list = [None, None, None]
 
-            else:
-                st.markdown('<div class="info-card" style="color:#9CA3AF;font-size:0.9rem;text-align:center;padding:32px">Selecione um sinistro à esquerda</div>', unsafe_allow_html=True)
+        # 🔥 chave única por sinistro
+        sinistro_id = str(selected_row.get("Nº sinistro", "")).strip() or str(orig_idx_meu)
 
+        for i, pcol in enumerate(photo_cols):
+            with pcol:
+                uploaded = st.file_uploader(
+                    f"Foto {i+1}",
+                    type=["jpg","jpeg","png","bmp","webp","heic","heif"],
+                    key=f"photo_uploader_{i}_{sinistro_id}",   # 🔥 CHAVE ÚNICA POR SINISTRO
+                    label_visibility="visible"
+                )
+
+                if uploaded:
+                    raw = uploaded.read()
+                    st.session_state[f"photo_bytes_{i}"] = raw
+                else:
+                    st.session_state[f"photo_bytes_{i}"] = None
+
+                if st.session_state[f"photo_bytes_{i}"]:
+                    try:
+                        st.image(
+                            Image.open(io.BytesIO(st.session_state[f"photo_bytes_{i}"])),
+                            use_container_width=True
+                        )
+                    except:
+                        pass
+
+                photo_bytes_list[i] = st.session_state[f"photo_bytes_{i}"]
+
+    else:
+        st.markdown('<div class="info-card" style="color:#9CA3AF;font-size:0.9rem;text-align:center;padding:32px">Selecione um sinistro à esquerda</div>', unsafe_allow_html=True)
 
 for key, default in [
     ("txt_obs",""), ("txt_perito",""), ("txt_oficina",""),
