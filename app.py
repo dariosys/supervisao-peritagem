@@ -617,9 +617,10 @@ with col_right:
     else:
         st.markdown('<div class="info-card" style="color:#9CA3AF;font-size:0.9rem;text-align:center;padding:32px">Selecione um sinistro à esquerda</div>', unsafe_allow_html=True)
 
-    st.markdown('<p class="step-label" style="margin-top:24px">3 · Suporte fotográfico (até 3 fotos)</p>', unsafe_allow_html=True)
+# ── 3 · Suporte fotográfico (até 3 fotos) ───────────────────────────────
+st.markdown('<p class="step-label" style="margin-top:24px">3 · Suporte fotográfico (até 3 fotos)</p>', unsafe_allow_html=True)
 
-    photo_cols = st.columns(3)
+photo_cols = st.columns(3)
 photo_bytes_list = [None, None, None]
 
 for i, pcol in enumerate(photo_cols):
@@ -653,87 +654,92 @@ for i, pcol in enumerate(photo_cols):
         photo_bytes_list[i] = st.session_state[f"photo_bytes_{i}"]
 
 
-    st.markdown('<p class="step-label" style="margin-top:24px">4 · Textos do relatório</p>', unsafe_allow_html=True)
+# ── 4 · Textos do relatório ───────────────────────────────────────────────
+st.markdown('<p class="step-label" style="margin-top:24px">4 · Textos do relatório</p>', unsafe_allow_html=True)
 
-    # Inicializar session_state para os três campos
-    for key, default in [("txt_obs",""), ("txt_perito",""), ("txt_oficina",""),
-                         ("prev_sel_obs",""), ("prev_sel_perito",""), ("prev_sel_oficina","")]:
-        if key not in st.session_state:
-            st.session_state[key] = default
+# Inicializar session_state para os três campos
+for key, default in [
+    ("txt_obs",""), ("txt_perito",""), ("txt_oficina",""),
+    ("prev_sel_obs",""), ("prev_sel_perito",""), ("prev_sel_oficina","")
+]:
+    if key not in st.session_state:
+        st.session_state[key] = default
 
-    def aplicar_frase(sel_key, txt_key, prev_key, frases):
-        sel = st.selectbox(
-            "frase", frases,
-            key=sel_key, label_visibility="collapsed"
-        )
-        # Só atualiza o texto quando a seleção muda (e não é a opção vazia)
-        if sel != st.session_state[prev_key]:
-            st.session_state[prev_key] = sel
-            st.session_state[txt_key] = "" if sel.startswith("—") else sel
+def aplicar_frase(sel_key, txt_key, prev_key, frases):
+    sel = st.selectbox(
+        "frase", frases,
+        key=sel_key, label_visibility="collapsed"
+    )
+    # Só atualiza o texto quando a seleção muda (e não é a opção vazia)
+    if sel != st.session_state[prev_key]:
+        st.session_state[prev_key] = sel
+        st.session_state[txt_key] = "" if sel.startswith("—") else sel
 
-    # Observações
-    st.markdown("**Observações**")
-    aplicar_frase("sel_obs", "txt_obs", "prev_sel_obs", FRASES_OBSERVACOES)
-    texto_obs = st.text_area("obs", key="txt_obs", height=90,
+# Observações
+st.markdown("**Observações**")
+aplicar_frase("sel_obs", "txt_obs", "prev_sel_obs", FRASES_OBSERVACOES)
+texto_obs = st.text_area("obs", key="txt_obs", height=90,
+                          label_visibility="collapsed",
+                          placeholder="Selecione uma frase acima ou escreva aqui…")
+
+# Avalie o serviço do perito
+st.markdown("**Avalie o serviço do perito**")
+aplicar_frase("sel_perito", "txt_perito", "prev_sel_perito", FRASES_PERITO)
+texto_perito = st.text_area("perito", key="txt_perito", height=80,
+                             label_visibility="collapsed",
+                             placeholder="Selecione uma frase acima ou escreva aqui…")
+
+# Avalie o serviço da oficina
+st.markdown("**Avalie o serviço da oficina**")
+aplicar_frase("sel_oficina", "txt_oficina", "prev_sel_oficina", FRASES_OFICINA)
+texto_oficina = st.text_area("oficina", key="txt_oficina", height=80,
                               label_visibility="collapsed",
                               placeholder="Selecione uma frase acima ou escreva aqui…")
 
-    # Avalie o serviço do perito
-    st.markdown("**Avalie o serviço do perito**")
-    aplicar_frase("sel_perito", "txt_perito", "prev_sel_perito", FRASES_PERITO)
-    texto_perito = st.text_area("perito", key="txt_perito", height=80,
-                                 label_visibility="collapsed",
-                                 placeholder="Selecione uma frase acima ou escreva aqui…")
 
-    # Avalie o serviço da oficina
-    st.markdown("**Avalie o serviço da oficina**")
-    aplicar_frase("sel_oficina", "txt_oficina", "prev_sel_oficina", FRASES_OFICINA)
-    texto_oficina = st.text_area("oficina", key="txt_oficina", height=80,
-                                  label_visibility="collapsed",
-                                  placeholder="Selecione uma frase acima ou escreva aqui…")
+# ── 5 · Gerar PDF ─────────────────────────────────────────────────────────
+st.markdown('<p class="step-label" style="margin-top:24px">5 · Gerar PDF</p>', unsafe_allow_html=True)
 
-    st.markdown('<p class="step-label" style="margin-top:24px">5 · Gerar PDF</p>', unsafe_allow_html=True)
+can_generate = selected_row is not None
 
-    can_generate = selected_row is not None
+if not can_generate:
+    st.info("Carregue o Excel e selecione um sinistro para gerar o PDF.")
 
-    if not can_generate:
-        st.info("Carregue o Excel e selecione um sinistro para gerar o PDF.")
-
-    if st.button("⬇ Gerar e Descarregar PDF", disabled=not can_generate):
-        with st.spinner("A gerar PDF..."):
-            try:
-                pdf_bytes = fill_pdf_bytes(
+if st.button("⬇ Gerar e Descarregar PDF", disabled=not can_generate):
+    with st.spinner("A gerar PDF..."):
+        try:
+            pdf_bytes = fill_pdf_bytes(
                 df_total, selected_row, photo_bytes_list,
                 texto_obs, texto_perito, texto_oficina
-                )
+            )
 
-                sinistro = str(selected_row.get("Nº sinistro", "sinistro")).strip()
-                mat = str(selected_row.get("Matrícula", "")).strip().replace("-", "")
-                filename = f"supervisao_{sinistro}_{mat}.pdf"
+            sinistro = str(selected_row.get("Nº sinistro", "sinistro")).strip()
+            mat = str(selected_row.get("Matrícula", "")).strip().replace("-", "")
+            filename = f"supervisao_{sinistro}_{mat}.pdf"
 
-                import base64
-                pdf_b64 = base64.b64encode(pdf_bytes).decode()
+            import base64
+            pdf_b64 = base64.b64encode(pdf_bytes).decode()
 
-                href = f"""
-                    <a href="data:application/pdf;base64,{pdf_b64}"
-                       download="{filename}"
-                       style="
-                           display:block;
-                           background:#C8102E;
-                           color:white;
-                           padding:12px 20px;
-                           text-align:center;
-                           border-radius:6px;
-                           font-weight:600;
-                           text-decoration:none;
-                           margin-top:10px;
-                       ">
-                       📥 Descarregar PDF Final
-                    </a>
-                """
+            href = f"""
+                <a href="data:application/pdf;base64,{pdf_b64}"
+                   download="{filename}"
+                   style="
+                       display:block;
+                       background:#C8102E;
+                       color:white;
+                       padding:12px 20px;
+                       text-align:center;
+                       border-radius:6px;
+                       font-weight:600;
+                       text-decoration:none;
+                       margin-top:10px;
+                   ">
+                   📥 Descarregar PDF Final
+                </a>
+            """
 
-                st.markdown(href, unsafe_allow_html=True)
-                st.success(f"✓ PDF gerado com campos editáveis: {filename}")
+            st.markdown(href, unsafe_allow_html=True)
+            st.success(f"✓ PDF gerado com campos editáveis: {filename}")
 
-            except Exception as e:
-                st.error(f"Erro ao gerar PDF: {e}")
+        except Exception as e:
+            st.error(f"Erro ao gerar PDF: {e}")
