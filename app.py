@@ -621,7 +621,7 @@ with col_right:
                     raw = uploaded.read()
                     st.session_state[f"photo_bytes_{i}"] = raw
                 else:
-                    st.session_state.setdefault(f"photo_bytes_{i}", None)
+                    st.session_state[f"photo_bytes_{i}"] = None
 
                 if st.session_state[f"photo_bytes_{i}"]:
                     try:
