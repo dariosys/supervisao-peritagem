@@ -467,6 +467,11 @@ with col_left:
     
         orig_idx_meu = opts_meus[labels_meus.index(escolha_meu)][1]
         selected_row = df_total.iloc[orig_idx_meu]
+
+        # 🔥 Limpar fotos do sinistro anterior
+        for i in range(3):
+            st.session_state[f"photo_{i}"] = None
+
     
     
         # ── Exportar Excel ────────────────────────────────────────────────
