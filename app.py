@@ -730,7 +730,9 @@ if st.button("⬇ Gerar e Descarregar PDF", disabled=not can_generate):
         try:
             pdf_bytes = fill_pdf_bytes(
                 df_total, selected_row, photo_bytes_list,
-                texto_obs, texto_perito, texto_oficina
+                st.session_state.get(f"txt_obs_{sinistro_id}", ""),
+                st.session_state.get(f"txt_perito_{sinistro_id}", ""),
+                st.session_state.get(f"txt_oficina_{sinistro_id}", "")
             )
 
             sinistro = str(selected_row.get("Nº sinistro", "sinistro")).strip()
