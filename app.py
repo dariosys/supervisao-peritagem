@@ -383,22 +383,30 @@ with col_left:
     
             # ── 2 · Todos os sinistros — pesquisar e adicionar ───────────────────
             st.markdown('<p class="step-label" style="margin-top:20px">2 · Todos os sinistros</p>', unsafe_allow_html=True)
-    
-            search = st.text_input("🔍 Pesquisar", placeholder="nº sinistro, matrícula ou oficina…",
-                                   label_visibility="collapsed", key="search_all")
-    
+            
+            search = st.text_input(
+                "🔍 Pesquisar",
+                placeholder="nº sinistro, matrícula ou oficina…",
+                label_visibility="collapsed",
+                key="search_all"
+            )
+            
             df_total = st.session_state["df_total"]
-    
-            mask = pd.Series([True] * len(df_total))
+            
+            # 🔥 Filtro rápido (sem apply axis=1)
             if search.strip():
                 q = search.strip().lower()
-                mask = df_total.apply(
-                    lambda r: any(q in str(r.get(c,"")).lower()
-                              for c in ["Nº sinistro","Matrícula","Nome da oficina","Nome prestador"]),
-                    axis=1
-                )
-    
+                cols = ["Nº sinistro", "Matrícula", "Nome da oficina", "Nome prestador"]
+            
+                mask = df_total[cols] \
+                    .astype(str) \
+                    .apply(lambda col: col.str.lower().str.contains(q)) \
+                    .any(axis=1)
+            else:
+                mask = pd.Series([True] * len(df_total))
+            
             filtered_df = df_total[mask].reset_index(drop=False)
+
     
     
             if len(filtered_df) == 0:
