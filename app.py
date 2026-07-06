@@ -468,12 +468,7 @@ with col_left:
         orig_idx_meu = opts_meus[labels_meus.index(escolha_meu)][1]
         selected_row = df_total.iloc[orig_idx_meu]
 
-        # 🔥 Limpar fotos do sinistro anterior ANTES de desenhar o uploader
-        for i in range(3):
-             st.session_state[f"photo_bytes_{i}"] = None
-
-
-    
+           
     
         # ── Exportar Excel ────────────────────────────────────────────────
         st.markdown("---")
@@ -596,6 +591,10 @@ with col_left:
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True,
         )
+
+         # 🔥 Limpar fotos do sinistro anterior ANTES de desenhar o uploader
+        for i in range(3):
+             st.session_state[f"photo_bytes_{i}"] = None
 
 
 with col_right:
