@@ -589,7 +589,6 @@ else:
         use_container_width=True,
     )
 
-
 with col_right:
     st.markdown('<p class="step-label">Dados do sinistro selecionado</p>', unsafe_allow_html=True)
 
@@ -652,70 +651,67 @@ with col_right:
             unsafe_allow_html=True
         )
 
-for key, default in [
-    ("txt_obs",""), ("txt_perito",""), ("txt_oficina",""),
-    ("prev_sel_obs",""), ("prev_sel_perito",""), ("prev_sel_oficina","")
-]:
-    if key not in st.session_state:
-        st.session_state[key] = default
+# ── 4 · Textos do relatório ───────────────────────────────────────────────
+st.markdown('<p class="step-label" style="margin-top:24px">4 · Textos do relatório</p>', unsafe_allow_html=True)
 
-def aplicar_frase(sel_key, txt_key, prev_key, frases):
-    sel = st.selectbox("frase", frases, key=sel_key, label_visibility="collapsed")
-    if sel != st.session_state[prev_key]:
-        st.session_state[prev_key] = sel
-        st.session_state[txt_key] = "" if sel.startswith("—") else sel
+if selected_row is not None:
 
-# ID único por sinistro
-sinistro_id = str(selected_row.get("Nº sinistro", "")).strip() or str(orig_idx_meu)
+    # ID único por sinistro
+    sinistro_id = str(selected_row.get("Nº sinistro", "")).strip() or str(orig_idx_meu)
 
-# Observações
-st.markdown("**Observações**")
-aplicar_frase(
-    f"sel_obs_{sinistro_id}",
-    f"txt_obs_{sinistro_id}",
-    f"prev_sel_obs_{sinistro_id}",
-    FRASES_OBSERVACOES
-)
-texto_obs = st.text_area(
-    "obs",
-    key=f"txt_obs_{sinistro_id}",
-    height=90,
-    label_visibility="collapsed",
-    placeholder="Selecione uma frase acima ou escreva aqui…"
-)
+    # Observações
+    st.markdown("**Observações**")
+    aplicar_frase(
+        f"sel_obs_{sinistro_id}",
+        f"txt_obs_{sinistro_id}",
+        f"prev_sel_obs_{sinistro_id}",
+        FRASES_OBSERVACOES
+    )
+    texto_obs = st.text_area(
+        "obs",
+        key=f"txt_obs_{sinistro_id}",
+        height=90,
+        label_visibility="collapsed",
+        placeholder="Selecione uma frase acima ou escreva aqui…"
+    )
 
-# Avaliação do perito
-st.markdown("**Avalie o serviço do perito**")
-aplicar_frase(
-    f"sel_perito_{sinistro_id}",
-    f"txt_perito_{sinistro_id}",
-    f"prev_sel_perito_{sinistro_id}",
-    FRASES_PERITO
-)
-texto_perito = st.text_area(
-    "perito",
-    key=f"txt_perito_{sinistro_id}",
-    height=80,
-    label_visibility="collapsed",
-    placeholder="Selecione uma frase acima ou escreva aqui…"
-)
+    # Avaliação do perito
+    st.markdown("**Avalie o serviço do perito**")
+    aplicar_frase(
+        f"sel_perito_{sinistro_id}",
+        f"txt_perito_{sinistro_id}",
+        f"prev_sel_perito_{sinistro_id}",
+        FRASES_PERITO
+    )
+    texto_perito = st.text_area(
+        "perito",
+        key=f"txt_perito_{sinistro_id}",
+        height=80,
+        label_visibility="collapsed",
+        placeholder="Selecione uma frase acima ou escreva aqui…"
+    )
 
-# Avaliação da oficina
-st.markdown("**Avalie o serviço da oficina**")
-aplicar_frase(
-    f"sel_oficina_{sinistro_id}",
-    f"txt_oficina_{sinistro_id}",
-    f"prev_sel_oficina_{sinistro_id}",
-    FRASES_OFICINA
-)
-texto_oficina = st.text_area(
-    "oficina",
-    key=f"txt_oficina_{sinistro_id}",
-    height=80,
-    label_visibility="collapsed",
-    placeholder="Selecione uma frase acima ou escreva aqui…"
-)
+    # Avaliação da oficina
+    st.markdown("**Avalie o serviço da oficina**")
+    aplicar_frase(
+        f"sel_oficina_{sinistro_id}",
+        f"txt_oficina_{sinistro_id}",
+        f"prev_sel_oficina_{sinistro_id}",
+        FRASES_OFICINA
+    )
+    texto_oficina = st.text_area(
+        "oficina",
+        key=f"txt_oficina_{sinistro_id}",
+        height=80,
+        label_visibility="collapsed",
+        placeholder="Selecione uma frase acima ou escreva aqui…"
+    )
 
+else:
+    texto_obs = ""
+    texto_perito = ""
+    texto_oficina = ""
+    st.info("Selecione um sinistro para preencher os textos.")
 
 # ── 5 · Gerar PDF ─────────────────────────────────────────────────────────
 st.markdown('<p class="step-label" style="margin-top:24px">5 · Gerar PDF</p>', unsafe_allow_html=True)
