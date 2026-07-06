@@ -22,8 +22,8 @@ ZONAS_OFICIAIS = [
     "Centro de Colisão de Corroios",
     "Centro de Colisão de Figo Maduro",
     "Centro de Colisão de Guimarães",
-    "Centro de Colisão de Leiria",F
-    "Centro de Colisão de Lisboa",FF
+    "Centro de Colisão de Leiria",
+    "Centro de Colisão de Lisboa",
     "Centro de Colisão de Setúbal",
     "Centro de Colisão do Porto",
     "Chaves",
