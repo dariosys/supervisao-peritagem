@@ -588,14 +588,17 @@ else:
 with col_right:
     st.markdown('<p class="step-label">Dados do sinistro selecionado</p>', unsafe_allow_html=True)
 
-       if selected_row is not None:
+    if selected_row is not None:
         preview_fields = get_preview_fields(df_total)
         rows_html = ""
         for label, col in preview_fields:
             val = selected_row.get(col, "")
-            if pd.isna(val): val = "—"
-            elif hasattr(val, "strftime"): val = val.strftime("%d/%m/%Y")
-            else: val = str(val).strip() or "—"
+            if pd.isna(val): 
+                val = "—"
+            elif hasattr(val, "strftime"): 
+                val = val.strftime("%d/%m/%Y")
+            else: 
+                val = str(val).strip() or "—"
             if label == "Marca/Modelo":
                 modelo = str(selected_row.get("Modelo", "")).strip()
                 val = f"{val} {modelo}".strip() if val != "—" else "—"
@@ -616,7 +619,7 @@ with col_right:
                 uploaded = st.file_uploader(
                     f"Foto {i+1}",
                     type=["jpg","jpeg","png","bmp","webp","heic","heif"],
-                    key=f"photo_uploader_{i}_{sinistro_id}",   # 🔥 CHAVE ÚNICA POR SINISTRO
+                    key=f"photo_uploader_{i}_{sinistro_id}",
                     label_visibility="visible"
                 )
 
@@ -638,7 +641,11 @@ with col_right:
                 photo_bytes_list[i] = st.session_state[f"photo_bytes_{i}"]
 
     else:
-        st.markdown('<div class="info-card" style="color:#9CA3AF;font-size:0.9rem;text-align:center;padding:32px">Selecione um sinistro à esquerda</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="info-card" style="color:#9CA3AF;font-size:0.9rem;text-align:center;padding:32px">'
+            'Selecione um sinistro à esquerda</div>',
+            unsafe_allow_html=True
+        )
 
 for key, default in [
     ("txt_obs",""), ("txt_perito",""), ("txt_oficina",""),
