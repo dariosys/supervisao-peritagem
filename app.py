@@ -620,19 +620,38 @@ with col_right:
     st.markdown('<p class="step-label" style="margin-top:24px">3 · Suporte fotográfico (até 3 fotos)</p>', unsafe_allow_html=True)
 
     photo_cols = st.columns(3)
-    photo_bytes_list = [None, None, None]
+photo_bytes_list = [None, None, None]
 
-    for i, pcol in enumerate(photo_cols):
-        with pcol:
-            uploaded = st.file_uploader(f"Foto {i+1}", type=["jpg","jpeg","png","bmp","webp","heic","heif"],
-                                        key=f"photo_{i}", label_visibility="visible")
-            if uploaded:
-                raw = uploaded.read()
-                photo_bytes_list[i] = raw
-                try:
-                    st.image(Image.open(io.BytesIO(raw)), use_container_width=True)
-                except:
-                    pass
+for i, pcol in enumerate(photo_cols):
+    with pcol:
+        # Uploader com key NOVA (não será apagada)
+        uploaded = st.file_uploader(
+            f"Foto {i+1}",
+            type=["jpg","jpeg","png","bmp","webp","heic","heif"],
+            key=f"photo_uploader_{i}",
+            label_visibility="visible"
+        )
+
+        # Guardar bytes numa key separada
+        if uploaded:
+            raw = uploaded.read()
+            st.session_state[f"photo_bytes_{i}"] = raw
+        else:
+            st.session_state.setdefault(f"photo_bytes_{i}", None)
+
+        # Mostrar imagem se existir
+        if st.session_state[f"photo_bytes_{i}"]:
+            try:
+                st.image(
+                    Image.open(io.BytesIO(st.session_state[f"photo_bytes_{i}"])),
+                    use_container_width=True
+                )
+            except:
+                pass
+
+        # Preencher lista final para o PDF
+        photo_bytes_list[i] = st.session_state[f"photo_bytes_{i}"]
+
 
     st.markdown('<p class="step-label" style="margin-top:24px">4 · Textos do relatório</p>', unsafe_allow_html=True)
 
