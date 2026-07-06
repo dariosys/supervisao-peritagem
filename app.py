@@ -639,8 +639,8 @@ with col_right:
             photo_bytes_list[i] = st.session_state[f"photo_bytes_{i}"]
 
 
-    else:
-        st.markdown('<div class="info-card" style="color:#9CA3AF;font-size:0.9rem;text-align:center;padding:32px">Selecione um sinistro à esquerda</div>', unsafe_allow_html=True)
+            else:
+                st.markdown('<div class="info-card" style="color:#9CA3AF;font-size:0.9rem;text-align:center;padding:32px">Selecione um sinistro à esquerda</div>', unsafe_allow_html=True)
 
 
 for key, default in [
