@@ -665,23 +665,57 @@ def aplicar_frase(sel_key, txt_key, prev_key, frases):
         st.session_state[prev_key] = sel
         st.session_state[txt_key] = "" if sel.startswith("—") else sel
 
+# ID único por sinistro
+sinistro_id = str(selected_row.get("Nº sinistro", "")).strip() or str(orig_idx_meu)
+
+# Observações
 st.markdown("**Observações**")
-aplicar_frase("sel_obs", "txt_obs", "prev_sel_obs", FRASES_OBSERVACOES)
-texto_obs = st.text_area("obs", key="txt_obs", height=90,
-                          label_visibility="collapsed",
-                          placeholder="Selecione uma frase acima ou escreva aqui…")
+aplicar_frase(
+    f"sel_obs_{sinistro_id}",
+    f"txt_obs_{sinistro_id}",
+    f"prev_sel_obs_{sinistro_id}",
+    FRASES_OBSERVACOES
+)
+texto_obs = st.text_area(
+    "obs",
+    key=f"txt_obs_{sinistro_id}",
+    height=90,
+    label_visibility="collapsed",
+    placeholder="Selecione uma frase acima ou escreva aqui…"
+)
 
+# Avaliação do perito
 st.markdown("**Avalie o serviço do perito**")
-aplicar_frase("sel_perito", "txt_perito", "prev_sel_perito", FRASES_PERITO)
-texto_perito = st.text_area("perito", key="txt_perito", height=80,
-                             label_visibility="collapsed",
-                             placeholder="Selecione uma frase acima ou escreva aqui…")
+aplicar_frase(
+    f"sel_perito_{sinistro_id}",
+    f"txt_perito_{sinistro_id}",
+    f"prev_sel_perito_{sinistro_id}",
+    FRASES_PERITO
+)
+texto_perito = st.text_area(
+    "perito",
+    key=f"txt_perito_{sinistro_id}",
+    height=80,
+    label_visibility="collapsed",
+    placeholder="Selecione uma frase acima ou escreva aqui…"
+)
 
+# Avaliação da oficina
 st.markdown("**Avalie o serviço da oficina**")
-aplicar_frase("sel_oficina", "txt_oficina", "prev_sel_oficina", FRASES_OFICINA)
-texto_oficina = st.text_area("oficina", key="txt_oficina", height=80,
-                              label_visibility="collapsed",
-                              placeholder="Selecione uma frase acima ou escreva aqui…")
+aplicar_frase(
+    f"sel_oficina_{sinistro_id}",
+    f"txt_oficina_{sinistro_id}",
+    f"prev_sel_oficina_{sinistro_id}",
+    FRASES_OFICINA
+)
+texto_oficina = st.text_area(
+    "oficina",
+    key=f"txt_oficina_{sinistro_id}",
+    height=80,
+    label_visibility="collapsed",
+    placeholder="Selecione uma frase acima ou escreva aqui…"
+)
+
 
 # ── 5 · Gerar PDF ─────────────────────────────────────────────────────────
 st.markdown('<p class="step-label" style="margin-top:24px">5 · Gerar PDF</p>', unsafe_allow_html=True)
