@@ -466,7 +466,12 @@ else:
     orig_idx_meu = opts_meus[labels_meus.index(escolha_meu)][1]
     selected_row = df_total.iloc[orig_idx_meu]
 
-    # 🔥 LIMPAR FOTOS DO SINISTRO ANTERIOR — ANTES DO UPLOADER
+    # 🔥 Limpar textos ao mudar de sinistro
+    for key in ["txt_obs", "txt_perito", "txt_oficina",
+                "prev_sel_obs", "prev_sel_perito", "prev_sel_oficina"]:
+        st.session_state[key] = ""
+
+    # 🔥 Limpar fotos ao mudar de sinistro
     for i in range(3):
         st.session_state[f"photo_bytes_{i}"] = None
 
