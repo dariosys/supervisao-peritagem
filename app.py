@@ -651,6 +651,16 @@ with col_right:
             unsafe_allow_html=True
         )
 
+# ───────────────────────────────────────────────────────────────
+# Função aplicar_frase TEM de estar aqui, fora do col_right
+# ───────────────────────────────────────────────────────────────
+
+def aplicar_frase(sel_key, txt_key, prev_key, frases):
+    sel = st.selectbox("frase", frases, key=sel_key, label_visibility="collapsed")
+    if sel != st.session_state.get(prev_key, ""):
+        st.session_state[prev_key] = sel
+        st.session_state[txt_key] = "" if sel.startswith("—") else sel
+
 # ── 4 · Textos do relatório ───────────────────────────────────────────────
 st.markdown('<p class="step-label" style="margin-top:24px">4 · Textos do relatório</p>', unsafe_allow_html=True)
 
