@@ -22,8 +22,8 @@ ZONAS_OFICIAIS = [
     "Centro de Colisão de Corroios",
     "Centro de Colisão de Figo Maduro",
     "Centro de Colisão de Guimarães",
-    "Centro de Colisão de Leiria",
-    "Centro de Colisão de Lisboa",
+    "Centro de Colisão de Leiria",F
+    "Centro de Colisão de Lisboa",FF
     "Centro de Colisão de Setúbal",
     "Centro de Colisão do Porto",
     "Chaves",
@@ -381,68 +381,69 @@ with col_left:
                 st.session_state.excel_key = excel_key
                 st.session_state.marcados = []
 
-# ───────────────────────────────────────────────────────────────
-# 🔥 Filtro cacheado — SUPER RÁPIDO
-# ───────────────────────────────────────────────────────────────
-@st.cache_data
-def filtrar_sinistros(df, q):
-    """Filtro rápido e cacheado para pesquisa de sinistros."""
-    if not q:
-        return df
+            # ───────────────────────────────────────────────────────────────
+            # 🔥 Filtro cacheado — SUPER RÁPIDO
+            # ───────────────────────────────────────────────────────────────
+            @st.cache_data
+            def filtrar_sinistros(df, q):
+                """Filtro rápido e cacheado para pesquisa de sinistros."""
+                if not q:
+                    return df
 
-    q = q.lower().strip()
-    cols = ["Nº sinistro", "Matrícula", "Nome da oficina", "Nome prestador"]
+                q = q.lower().strip()
+                cols = ["Nº sinistro", "Matrícula", "Nome da oficina", "Nome prestador"]
 
-    mask = df[cols] \
-        .astype(str) \
-        .apply(lambda col: col.str.lower().str.contains(q)) \
-        .any(axis=1)
+                mask = df[cols] \
+                    .astype(str) \
+                    .apply(lambda col: col.str.lower().str.contains(q)) \
+                    .any(axis=1)
 
-    return df[mask]
+                return df[mask]
 
-# ── 2 · Todos os sinistros — pesquisar e adicionar ───────────────────
-st.markdown('<p class="step-label" style="margin-top:20px">2 · Todos os sinistros</p>', unsafe_allow_html=True)
+            # ── 2 · Todos os sinistros — pesquisar e adicionar ───────────────────
+            st.markdown('<p class="step-label" style="margin-top:20px">2 · Todos os sinistros</p>', unsafe_allow_html=True)
+            
+            search = st.text_input(
+                "🔍 Pesquisar",
+                placeholder="nº sinistro, matrícula ou oficina…",
+                label_visibility="collapsed",
+                key="search_all"
+            )
+            
+            df_total = st.session_state["df_total"]
 
-search = st.text_input(
-    "🔍 Pesquisar",
-    placeholder="nº sinistro, matrícula ou oficina…",
-    label_visibility="collapsed",
-    key="search_all"
-)
+            # 🔥 Filtro cacheado (instantâneo)
+            filtered_df = filtrar_sinistros(df_total, search).reset_index(drop=False)
 
-df_total = st.session_state["df_total"]
+            if len(filtered_df) == 0:
+                st.info("Nenhum sinistro encontrado.")
+            else:
+                # Selectbox com todos os sinistros filtrados
+                opts = []
+                for _, r in filtered_df.iterrows():
+                    orig_idx = int(r["index"])
+                    sin = str(r.get("Nº sinistro","")).strip()
+                    mat = str(r.get("Matrícula","")).strip()
+                    ofi = str(r.get("Nome da oficina","") or r.get("Nome prestador","")).strip()[:30]
+                    ja = "✅" if orig_idx in st.session_state.marcados else "  "
+                    opts.append((f"{ja}  {sin}  ·  {mat}  ·  {ofi}", orig_idx))
+    
+                labels = [o[0] for o in opts]
+                escolha = st.selectbox("sinistro", labels, label_visibility="collapsed", key="sel_all")
+                idx_sel = opts[labels.index(escolha)][1]
+    
+                # Botões Adicionar / Remover lado a lado
+                c1, c2 = st.columns(2)
+                with c1:
+                    if st.button("✅  Adicionar aos meus", key="btn_add", use_container_width=True):
+                        if idx_sel not in st.session_state.marcados:
+                            st.session_state.marcados.append(idx_sel)
 
-# 🔥 Filtro cacheado (instantâneo)
-filtered_df = filtrar_sinistros(df_total, search).reset_index(drop=False)
+                with c2:
+                    if st.button("✖  Remover dos meus", key="btn_rem", use_container_width=True):
+                        if idx_sel in st.session_state.marcados:
+                            st.session_state.marcados.remove(idx_sel)
 
-if len(filtered_df) == 0:
-    st.info("Nenhum sinistro encontrado.")
-else:
-    # Selectbox com todos os sinistros filtrados
-    opts = []
-    for _, r in filtered_df.iterrows():
-        orig_idx = int(r["index"])
-        sin = str(r.get("Nº sinistro","")).strip()
-        mat = str(r.get("Matrícula","")).strip()
-        ofi = str(r.get("Nome da oficina","") or r.get("Nome prestador","")).strip()[:30]
-        ja = "✅" if orig_idx in st.session_state.marcados else "  "
-        opts.append((f"{ja}  {sin}  ·  {mat}  ·  {ofi}", orig_idx))
-
-    labels = [o[0] for o in opts]
-    escolha = st.selectbox("sinistro", labels, label_visibility="collapsed", key="sel_all")
-    idx_sel = opts[labels.index(escolha)][1]
-
-    # Botões Adicionar / Remover lado a lado
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("✅  Adicionar aos meus", key="btn_add", use_container_width=True):
-            if idx_sel not in st.session_state.marcados:
-                st.session_state.marcados.append(idx_sel)
-
-    with c2:
-        if st.button("✖  Remover dos meus", key="btn_rem", use_container_width=True):
-            if idx_sel in st.session_state.marcados:
-                st.session_state.marcados.remove(idx_sel)
 
     
 # ── 3 · Os meus sinistros ────────────────────────────────────────────
