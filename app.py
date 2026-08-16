@@ -446,163 +446,163 @@ with col_left:
 
 
     
-# ── 3 · Os meus sinistros ────────────────────────────────────────────
-if "marcados" not in st.session_state:
-    st.session_state.marcados = []
-
-n_marcados = len(st.session_state.marcados)
-
-st.markdown(
-    f'<p class="step-label" style="margin-top:24px">3 · Os meus sinistros&nbsp; '
-    f'<span style="background:#C8102E;color:white;border-radius:10px;padding:1px 8px;font-size:11px">{n_marcados}</span></p>',
-    unsafe_allow_html=True
-)
-
-selected_row = None
-
-if n_marcados == 0:
-    st.info("Adicione sinistros acima para os ver aqui.")
-else:
-    df_total = st.session_state["df_total"]
-
-    meus_rows = df_total.loc[st.session_state.marcados].reset_index(drop=False)
-
-    opts_meus = []
-    for _, r in meus_rows.iterrows():
-        sin = str(r.get("Nº sinistro", "")).strip()
-        mat = str(r.get("Matrícula", "")).strip()
-        ofi = str(r.get("Nome da oficina", "") or r.get("Nome prestador", "")).strip()[:30]
-        opts_meus.append((f"🔴  {sin}  ·  {mat}  ·  {ofi}", int(r["index"])))
-
-    labels_meus = [o[0] for o in opts_meus]
-    escolha_meu = st.selectbox("Selecionar para gerar PDF", labels_meus,
-                               label_visibility="visible", key="sel_meus")
-
-    orig_idx_meu = opts_meus[labels_meus.index(escolha_meu)][1]
-    selected_row = df_total.iloc[orig_idx_meu]
-
-    # 🔥 Limpar textos ao mudar de sinistro
-    for key in ["txt_obs", "txt_perito", "txt_oficina",
-                "prev_sel_obs", "prev_sel_perito", "prev_sel_oficina"]:
-        st.session_state[key] = ""
-
-    # 🔥 Limpar fotos ao mudar de sinistro
-    for i in range(3):
-        st.session_state[f"photo_bytes_{i}"] = None
-
-    # ── Exportar Excel ────────────────────────────────────────────────
-    st.markdown("---")
-
-    MESES_PT = {
-        1:"Janeiro", 2:"Fevereiro", 3:"Março", 4:"Abril",
-        5:"Maio", 6:"Junho", 7:"Julho", 8:"Agosto",
-        9:"Setembro", 10:"Outubro", 11:"Novembro", 12:"Dezembro"
-    }
-
-    def gerar_excel_export(meus_rows_df):
-        import io as _io
-        export_rows = []
-        for _, r in meus_rows_df.iterrows():
-            data_val = r.get("Dt efect in", r.get("Data/ Hora da Visita", ""))
-            if hasattr(data_val, "strftime"):
-                mes_num = data_val.month
-                data_str = data_val.strftime("%d/%m/%Y")
-            elif not pd.isna(data_val) and str(data_val).strip():
-                try:
-                    dt = pd.to_datetime(data_val, dayfirst=True)
-                    mes_num = dt.month
-                    data_str = dt.strftime("%d/%m/%Y")
-                except:
-                    mes_num = 0
-                    data_str = str(data_val).strip()
+            # ── 3 · Os meus sinistros ────────────────────────────────────────────
+            if "marcados" not in st.session_state:
+                st.session_state.marcados = []
+            
+            n_marcados = len(st.session_state.marcados)
+            
+            st.markdown(
+                f'<p class="step-label" style="margin-top:24px">3 · Os meus sinistros&nbsp; '
+                f'<span style="background:#C8102E;color:white;border-radius:10px;padding:1px 8px;font-size:11px">{n_marcados}</span></p>',
+                unsafe_allow_html=True
+            )
+            
+            selected_row = None
+            
+            if n_marcados == 0:
+                st.info("Adicione sinistros acima para os ver aqui.")
             else:
-                mes_num = 0
-                data_str = ""
-
-            mes_str = MESES_PT.get(mes_num, "")
-            sinistro = str(r.get("Nº sinistro", "")).strip()
-            entidade = "Logo" if len(sinistro) == 10 else "Tranquilidade"
-
-            cod_raw = r.get("Nº prest ofic", "")
-            if isinstance(cod_raw, float) and cod_raw.is_integer():
-                cod_oficina = str(int(cod_raw))
-            else:
-                cod_oficina = str(cod_raw).strip()
-            if cod_oficina == "nan":
-                cod_oficina = ""
-
-            ocorr_raw = r.get("Nº ocorrência", "")
-            if isinstance(ocorr_raw, float) and ocorr_raw.is_integer():
-                ocorrencia = str(int(ocorr_raw))
-            else:
-                ocorrencia = str(ocorr_raw).strip()
-            if ocorrencia == "nan":
-                ocorrencia = ""
-
-            convencionada_raw = str(r.get("Desc.Tipo Oficina", "")).strip()
-            if convencionada_raw == "nan":
-                convencionada_raw = ""
-            convencionada = "Sim" if "CONVENCIONADA" in convencionada_raw.upper() else "Não"
-
-            zona_raw = str(r.get("Morada local prestação", r.get("Localidade", ""))).strip()
-            if zona_raw == "nan":
-                zona_raw = ""
-            zona_norm = normalizar(zona_raw)
-            zona = MAPA_ZONAS.get(zona_norm, zona_raw)
-
-            export_rows.append({
-                "Deslocação"   : "",
-                "Mês"          : "",
-                "Ocorrência"   : ocorrencia,
-                "Sinistro"     : sinistro,
-                "Entidade"     : entidade,
-                "Cod. Oficina" : cod_oficina,
-                "Motivo"       : "",
-                "Convencionada": convencionada,
-                "NLO"          : "Não",
-                "Zona"         : zona,
-                "Redução 25%"  : "Não",
-            })
-
-        df_export = pd.DataFrame(export_rows, columns=[
-            "Deslocação", "Mês", "Ocorrência", "Sinistro", "Entidade",
-            "Cod. Oficina", "Motivo", "Convencionada", "NLO", "Zona", "Redução 25%"
-        ])
-
-        buf = _io.BytesIO()
-        with pd.ExcelWriter(buf, engine="openpyxl") as writer:
-            df_export.to_excel(writer, index=False, sheet_name="Deslocações")
-            ws = writer.sheets["Deslocações"]
-            col_widths = [13, 12, 12, 14, 16, 14, 12, 14, 6, 20, 13]
-            for i, w in enumerate(col_widths, 1):
-                ws.column_dimensions[ws.cell(1, i).column_letter].width = w
-
-            from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-            thin = Side(style="thin", color="000000")
-            border = Border(left=thin, right=thin, top=thin, bottom=thin)
-
-            for row in ws.iter_rows(min_row=1, max_row=ws.max_row, max_col=ws.max_column):
-                for cell in row:
-                    cell.alignment = Alignment(horizontal="center", vertical="center")
-                    cell.border = border
-                    if cell.row == 1:
-                        cell.font = Font(bold=True, color="FFFFFF")
-                        cell.fill = PatternFill("solid", fgColor="1A1A2E")
-
-        buf.seek(0)
-        return buf.getvalue()
-
-    excel_bytes = gerar_excel_export(meus_rows)
-    from datetime import date
-    nome_ficheiro = f"deslocacoes_{date.today().strftime('%Y%m%d')}.xlsx"
-
-    st.download_button(
-        label="📊  Exportar lista para Excel",
-        data=excel_bytes,
-        file_name=nome_ficheiro,
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True,
-    )
+                df_total = st.session_state["df_total"]
+            
+                meus_rows = df_total.loc[st.session_state.marcados].reset_index(drop=False)
+            
+                opts_meus = []
+                for _, r in meus_rows.iterrows():
+                    sin = str(r.get("Nº sinistro", "")).strip()
+                    mat = str(r.get("Matrícula", "")).strip()
+                    ofi = str(r.get("Nome da oficina", "") or r.get("Nome prestador", "")).strip()[:30]
+                    opts_meus.append((f"🔴  {sin}  ·  {mat}  ·  {ofi}", int(r["index"])))
+            
+                labels_meus = [o[0] for o in opts_meus]
+                escolha_meu = st.selectbox("Selecionar para gerar PDF", labels_meus,
+                                           label_visibility="visible", key="sel_meus")
+            
+                orig_idx_meu = opts_meus[labels_meus.index(escolha_meu)][1]
+                selected_row = df_total.iloc[orig_idx_meu]
+            
+                # 🔥 Limpar textos ao mudar de sinistro
+                for key in ["txt_obs", "txt_perito", "txt_oficina",
+                            "prev_sel_obs", "prev_sel_perito", "prev_sel_oficina"]:
+                    st.session_state[key] = ""
+            
+                # 🔥 Limpar fotos ao mudar de sinistro
+                for i in range(3):
+                    st.session_state[f"photo_bytes_{i}"] = None
+            
+                # ── Exportar Excel ────────────────────────────────────────────────
+                st.markdown("---")
+            
+                MESES_PT = {
+                    1:"Janeiro", 2:"Fevereiro", 3:"Março", 4:"Abril",
+                    5:"Maio", 6:"Junho", 7:"Julho", 8:"Agosto",
+                    9:"Setembro", 10:"Outubro", 11:"Novembro", 12:"Dezembro"
+                }
+            
+                def gerar_excel_export(meus_rows_df):
+                    import io as _io
+                    export_rows = []
+                    for _, r in meus_rows_df.iterrows():
+                        data_val = r.get("Dt efect in", r.get("Data/ Hora da Visita", ""))
+                        if hasattr(data_val, "strftime"):
+                            mes_num = data_val.month
+                            data_str = data_val.strftime("%d/%m/%Y")
+                        elif not pd.isna(data_val) and str(data_val).strip():
+                            try:
+                                dt = pd.to_datetime(data_val, dayfirst=True)
+                                mes_num = dt.month
+                                data_str = dt.strftime("%d/%m/%Y")
+                            except:
+                                mes_num = 0
+                                data_str = str(data_val).strip()
+                        else:
+                            mes_num = 0
+                            data_str = ""
+            
+                        mes_str = MESES_PT.get(mes_num, "")
+                        sinistro = str(r.get("Nº sinistro", "")).strip()
+                        entidade = "Logo" if len(sinistro) == 10 else "Tranquilidade"
+            
+                        cod_raw = r.get("Nº prest ofic", "")
+                        if isinstance(cod_raw, float) and cod_raw.is_integer():
+                            cod_oficina = str(int(cod_raw))
+                        else:
+                            cod_oficina = str(cod_raw).strip()
+                        if cod_oficina == "nan":
+                            cod_oficina = ""
+            
+                        ocorr_raw = r.get("Nº ocorrência", "")
+                        if isinstance(ocorr_raw, float) and ocorr_raw.is_integer():
+                            ocorrencia = str(int(ocorr_raw))
+                        else:
+                            ocorrencia = str(ocorr_raw).strip()
+                        if ocorrencia == "nan":
+                            ocorrencia = ""
+            
+                        convencionada_raw = str(r.get("Desc.Tipo Oficina", "")).strip()
+                        if convencionada_raw == "nan":
+                            convencionada_raw = ""
+                        convencionada = "Sim" if "CONVENCIONADA" in convencionada_raw.upper() else "Não"
+            
+                        zona_raw = str(r.get("Morada local prestação", r.get("Localidade", ""))).strip()
+                        if zona_raw == "nan":
+                            zona_raw = ""
+                        zona_norm = normalizar(zona_raw)
+                        zona = MAPA_ZONAS.get(zona_norm, zona_raw)
+            
+                        export_rows.append({
+                            "Deslocação"   : "",
+                            "Mês"          : "",
+                            "Ocorrência"   : ocorrencia,
+                            "Sinistro"     : sinistro,
+                            "Entidade"     : entidade,
+                            "Cod. Oficina" : cod_oficina,
+                            "Motivo"       : "",
+                            "Convencionada": convencionada,
+                            "NLO"          : "Não",
+                            "Zona"         : zona,
+                            "Redução 25%"  : "Não",
+                        })
+            
+                    df_export = pd.DataFrame(export_rows, columns=[
+                        "Deslocação", "Mês", "Ocorrência", "Sinistro", "Entidade",
+                        "Cod. Oficina", "Motivo", "Convencionada", "NLO", "Zona", "Redução 25%"
+                    ])
+            
+                    buf = _io.BytesIO()
+                    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+                        df_export.to_excel(writer, index=False, sheet_name="Deslocações")
+                        ws = writer.sheets["Deslocações"]
+                        col_widths = [13, 12, 12, 14, 16, 14, 12, 14, 6, 20, 13]
+                        for i, w in enumerate(col_widths, 1):
+                            ws.column_dimensions[ws.cell(1, i).column_letter].width = w
+            
+                        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+                        thin = Side(style="thin", color="000000")
+                        border = Border(left=thin, right=thin, top=thin, bottom=thin)
+            
+                        for row in ws.iter_rows(min_row=1, max_row=ws.max_row, max_col=ws.max_column):
+                            for cell in row:
+                                cell.alignment = Alignment(horizontal="center", vertical="center")
+                                cell.border = border
+                                if cell.row == 1:
+                                    cell.font = Font(bold=True, color="FFFFFF")
+                                    cell.fill = PatternFill("solid", fgColor="1A1A2E")
+            
+                    buf.seek(0)
+                    return buf.getvalue()
+            
+                excel_bytes = gerar_excel_export(meus_rows)
+                from datetime import date
+                nome_ficheiro = f"deslocacoes_{date.today().strftime('%Y%m%d')}.xlsx"
+            
+                st.download_button(
+                    label="📊  Exportar lista para Excel",
+                    data=excel_bytes,
+                    file_name=nome_ficheiro,
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True,
+                )
 
 with col_right:
     st.markdown('<p class="step-label">Dados do sinistro selecionado</p>', unsafe_allow_html=True)
